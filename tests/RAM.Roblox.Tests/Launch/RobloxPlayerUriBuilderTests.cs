@@ -14,12 +14,18 @@ public class RobloxPlayerUriBuilderTests
             Target: new LaunchTarget.Place(606849621),
             LaunchTime: DateTimeOffset.FromUnixTimeMilliseconds(1700000000000)));
 
-        Assert.StartsWith("roblox-player://1+launchmode:play+gameinfo:TKT-1+", uri);
+        // Roblox launcher only accepts `roblox-player:1+...` (single colon, no slashes).
+        // The `://` form silently fails — confirmed against original RAM, Fork-4, and ReJoin.
+        Assert.StartsWith("roblox-player:1+launchmode:play+gameinfo:TKT-1+", uri);
+        Assert.DoesNotContain("roblox-player://", uri);
         Assert.Contains("launchtime:1700000000000", uri);
         Assert.Contains("browsertrackerid:1234567890123456", uri);
         Assert.Contains("placelauncherurl:", uri);
         Assert.Contains(Uri.EscapeDataString("placeId=606849621"), uri);
         Assert.Contains(Uri.EscapeDataString("request=RequestGame"), uri);
+
+        // Trailing fields required by the Roblox launcher.
+        Assert.EndsWith("+channel:+LaunchExp:InApp", uri);
     }
 
     [Fact]

@@ -168,17 +168,24 @@ public sealed class RobloxLauncher : ILauncher
     }
 
     /// <summary>
-    /// Hands the URI to the OS shell. Returns the immediate handler PID, or -1 when shell-
-    /// execute on a custom URI scheme returns no process handle (which is normal — the
-    /// protocol handler may run out-of-process). A null return here is NOT failure;
-    /// failure surfaces as a <see cref="System.ComponentModel.Win32Exception"/>.
+    /// Hands the URI to the OS shell via <c>cmd /C start "" "&lt;uri&gt;"</c>. This matches
+    /// what Fork-4 and ReJoin do — the <c>start</c> built-in is more forgiving with
+    /// custom URI schemes than .NET's <c>Process.Start</c> with <c>UseShellExecute=true</c>,
+    /// which has had subtle behaviour changes between .NET Framework, .NET Core, and
+    /// .NET 5+. Returns the cmd.exe pid (Roblox launcher itself runs out-of-tree).
     /// </summary>
     private static int ShellLaunch(string uri)
     {
+        // The first "" is the title argument expected by the Windows `start` command —
+        // when its first quoted argument is the URI, `start` would interpret it as the
+        // window title and silently do nothing. Always pass an empty title first.
         var psi = new ProcessStartInfo
         {
-            FileName = uri,
-            UseShellExecute = true,
+            FileName = "cmd.exe",
+            Arguments = $"/C start \"\" \"{uri}\"",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
         };
         using var proc = Process.Start(psi);
         return proc?.Id ?? -1;
