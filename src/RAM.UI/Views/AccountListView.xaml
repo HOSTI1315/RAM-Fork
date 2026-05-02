@@ -38,7 +38,9 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
-                    <!-- header -->
+                    <!-- Quick launch defaults (Place ID / Job ID) -->
+                    <RowDefinition Height="Auto" />
+                    <!-- GROUPS header -->
                     <RowDefinition Height="Auto" />
                     <!-- All accounts button -->
                     <RowDefinition Height="*" />
@@ -47,8 +49,58 @@
                     <!-- footer -->
                 </Grid.RowDefinitions>
 
+                <!-- =====================================================
+                     QUICK LAUNCH defaults — Place ID + Job ID applied to
+                     every row Launch button + the "Launch all" bulkbar
+                     action. Empty Place ID falls back to opening the
+                     LaunchDialog (so users don't silently get placeId=0).
+                     ===================================================== -->
+                <Border Grid.Row="0"
+                        Background="{DynamicResource BgPrimary}"
+                        BorderBrush="{DynamicResource BorderSubtle}"
+                        BorderThickness="0,0,0,1"
+                        Padding="12,10,12,10">
+                    <StackPanel>
+                        <TextBlock Text="QUICK LAUNCH"
+                                   FontSize="11" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource FgTertiary}"
+                                   Margin="0,0,0,8" />
+                        <TextBlock Text="Place ID"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource FgSecondary}"
+                                   Margin="0,0,0,2" />
+                        <TextBox Text="{Binding LaunchPlaceId, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="{DynamicResource BgInput}"
+                                 BorderBrush="{DynamicResource BorderDefault}"
+                                 BorderThickness="1"
+                                 Foreground="{DynamicResource FgPrimary}"
+                                 CaretBrush="{DynamicResource FgPrimary}"
+                                 FontFamily="{DynamicResource FontMono}"
+                                 FontSize="12"
+                                 Padding="8,4"
+                                 Height="26"
+                                 Margin="0,0,0,8"
+                                 ToolTip="Numeric Roblox Place ID. Applied to every Launch click. Leave empty to be prompted." />
+                        <TextBlock Text="Job ID (optional)"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource FgSecondary}"
+                                   Margin="0,0,0,2" />
+                        <TextBox Text="{Binding LaunchJobId, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="{DynamicResource BgInput}"
+                                 BorderBrush="{DynamicResource BorderDefault}"
+                                 BorderThickness="1"
+                                 Foreground="{DynamicResource FgPrimary}"
+                                 CaretBrush="{DynamicResource FgPrimary}"
+                                 FontFamily="{DynamicResource FontMono}"
+                                 FontSize="12"
+                                 Padding="8,4"
+                                 Height="26"
+                                 ToolTip="Optional server JobId (GUID) to join a specific server instance." />
+                    </StackPanel>
+                </Border>
+
                 <!-- Section header -->
-                <Grid Grid.Row="0" Margin="8,12,8,6">
+                <Grid Grid.Row="1" Margin="8,12,8,6">
                     <TextBlock Text="GROUPS"
                                FontSize="11" FontWeight="SemiBold"
                                Foreground="{DynamicResource FgTertiary}"
@@ -66,7 +118,7 @@
 
                 <!-- "All accounts" — separate Button (NOT inside ListBox) bound to
                      ClearGroupCommand. Highlight when IsAllSelected via DataTrigger. -->
-                <Button Grid.Row="1"
+                <Button Grid.Row="2"
                         Command="{Binding ClearGroupCommand}"
                         Margin="6,0,6,0"
                         Cursor="Hand"
@@ -137,7 +189,7 @@
                 </Button>
 
                 <!-- Real groups (sorted by SortKey then name in VM) -->
-                <ListBox Grid.Row="2"
+                <ListBox Grid.Row="3"
                          Style="{StaticResource BareListBoxStyle}"
                          ItemContainerStyle="{StaticResource GroupRowStyle}"
                          ItemsSource="{Binding Groups}"
@@ -155,7 +207,7 @@
                 </ListBox>
 
                 <!-- Footer: profile card -->
-                <Border Grid.Row="3"
+                <Border Grid.Row="4"
                         Background="{DynamicResource BgDeepest}"
                         BorderBrush="{DynamicResource BorderSubtle}"
                         BorderThickness="0,1,0,0"

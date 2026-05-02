@@ -524,7 +524,7 @@
                                     Margin="0,0,8,0"
                                     Content="Cancel" />
                             <Button Grid.Column="2"
-                                    Command="{Binding ApplyChangesCommand}"
+                                    Command="{Binding SaveCommand}"
                                     IsEnabled="{Binding IsDirty}">
                                 <Button.Style>
                                     <Style TargetType="Button" BasedOn="{StaticResource BtnPrimaryStyle}" />

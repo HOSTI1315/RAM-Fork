@@ -11,6 +11,7 @@ namespace RAM.App.ViewModels;
 public sealed partial class AccountDetailViewModel : ObservableObject
 {
     private Account _original;
+    private readonly Func<Account, Task>? _saveCallback;
 
     [ObservableProperty] private string username = "";
     [ObservableProperty] private string displayName = "";
@@ -39,9 +40,10 @@ public sealed partial class AccountDetailViewModel : ObservableObject
     public DateTimeOffset Created => _original.Created;
     public DateTimeOffset? LastUsed => _original.LastUsed;
 
-    public AccountDetailViewModel(Account account)
+    public AccountDetailViewModel(Account account, Func<Account, Task>? saveCallback = null)
     {
         _original = account;
+        _saveCallback = saveCallback;
         ResetFromAccount(account);
     }
 
@@ -108,6 +110,18 @@ public sealed partial class AccountDetailViewModel : ObservableObject
 
     [RelayCommand]
     public void Cancel() => ResetFromAccount(_original);
+
+    /// <summary>Persist current edits via the save callback the parent passed in.
+    /// Without a callback (test / headless), calling this is equivalent to
+    /// <see cref="ApplyChanges"/>.</summary>
+    [RelayCommand]
+    public async Task SaveAsync()
+    {
+        if (!IsDirty) return;
+        var updated = ApplyChanges();
+        if (_saveCallback is not null)
+            await _saveCallback(updated);
+    }
 
     partial void OnDisplayNameChanged(string value) => MarkDirty();
     partial void OnGroupChanged(string value) => MarkDirty();

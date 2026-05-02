@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 
 namespace RAM.UI.Views;
 
@@ -23,4 +24,20 @@ public partial class ShellView : Window
             ? new Thickness(7)
             : new Thickness(0);
     }
+
+    // Title-bar SystemCommands handlers. Bound from the XAML CommandBindings on Window.
+    // Without these, SystemCommands.* are RoutedCommands that nobody handles → buttons
+    // are dead. SystemCommands.{Minimize,Maximize,Restore,Close}Window do the right thing
+    // for a WindowChrome-based custom title bar.
+    private void OnMinimizeExecuted(object sender, ExecutedRoutedEventArgs e)
+        => SystemCommands.MinimizeWindow(this);
+
+    private void OnMaximizeExecuted(object sender, ExecutedRoutedEventArgs e)
+        => SystemCommands.MaximizeWindow(this);
+
+    private void OnRestoreExecuted(object sender, ExecutedRoutedEventArgs e)
+        => SystemCommands.RestoreWindow(this);
+
+    private void OnCloseExecuted(object sender, ExecutedRoutedEventArgs e)
+        => SystemCommands.CloseWindow(this);
 }

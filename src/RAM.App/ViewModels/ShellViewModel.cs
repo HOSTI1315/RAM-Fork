@@ -51,10 +51,9 @@ public sealed partial class ShellViewModel : ObservableObject
         _fileDialog = fileDialog;
         AccountList.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(AccountListViewModel.SelectedItem))
-                ActiveDetail = AccountList.SelectedItem is null
-                    ? null
-                    : new AccountDetailViewModel(AccountList.SelectedItem.Account);
+            if (e.PropertyName != nameof(AccountListViewModel.SelectedItem)) return;
+            var item = AccountList.SelectedItem;
+            ActiveDetail = item is null ? null : BuildDetailVm(item);
         };
 
         // Wire AccountList event-style command delegates to ShellVM dialogs. Avoids a
@@ -63,6 +62,20 @@ public sealed partial class ShellViewModel : ObservableObject
         AccountList.LaunchDialogRequested    += (_, item) => OpenLaunchDialogCommand.Execute(item);
         AccountList.SettingsRequested        += (_, _) => OpenSettingsCommand.Execute(null);
     }
+
+    /// <summary>Build a detail VM bound to <paramref name="item"/>. The save callback
+    /// captures the row so detail edits propagate back into the list and persist to disk.</summary>
+    private AccountDetailViewModel BuildDetailVm(AccountItemViewModel item)
+        => new(item.Account, async updated =>
+        {
+            // Mirror the updated record into the row VM (drives UI refresh of name,
+            // group, alias, etc.) and into the master list for persistence.
+            item.Account = updated;
+            // Notify the rejoin manager if the account was just disabled — it stops
+            // the worker but keeps the cached worker ready for a future relaunch.
+            if (updated.Disabled) AccountList.NotifyAccountDisabled(updated.UserId);
+            await AccountList.PersistAsync();
+        });
 
     /// <summary>Closes the detail panel by clearing the underlying selection.</summary>
     [RelayCommand]

@@ -136,6 +136,42 @@ Reasons to do it:
 
 ---
 
+## 7. Per-account embedded browser (WebView2)
+
+**Labels:** `ui`, `feature`, `auth`
+
+**Context.** The original RAM ships an embedded browser per account: a side-panel WebView2 instance with that account's `.ROBLOSECURITY` cookie pre-loaded, so users can interact with the Roblox web (settings, trades, chat, group admin) without copying cookies between Chrome profiles or going through the regular `roblox.com` login flow.
+
+This is a significant UX feature for people managing many accounts — it's how the original RAM is positioned vs raw cookie launchers. **It is not implemented in v1 of this fork.** End-user testing of v1 surfaced this as a gap relative to the original.
+
+## Suggested fix
+
+1. Add `Microsoft.Web.WebView2.Wpf` NuGet to `RAM.UI`. Bundle the WebView2 runtime via the evergreen bootstrapper (most Win10/11 machines have it; the bootstrapper covers the rest with a small download on first launch).
+2. Create a new view: `RAM.UI/Views/AccountBrowserView.xaml` with a single `WebView2` control filling the panel. Add a "Browser" tab to `AccountDetailView.xaml` alongside the existing fields tab, OR open the browser as a separate overlay/window.
+3. Per-account cookie isolation: WebView2 supports `CoreWebView2CreationProperties.UserDataFolder` — give each account its own folder under `%AppData%\RAM\webview\<userId>\`. This keeps cookies, cache, IndexedDB strictly partitioned. Critical: users with 50 accounts open all browsers → 50 user-data folders. Investigate disk footprint and add cleanup on `OnAccountRemovedAsync`.
+4. Cookie injection: on first navigation to `roblox.com`, inject the account's `.ROBLOSECURITY` via `CoreWebView2CookieManager.AddOrUpdateCookieAsync`. Mark the cookie HttpOnly + Secure + SameSite=None to match what Roblox's own login sets.
+5. Login state observation: subscribe to `CookieAdded` events. If the user logs out from inside the browser, Roblox clears the cookie — we may want to detect that and warn the user (but NOT auto-update the stored cookie, since the new cookie may be invalid or for a different account).
+6. Refresh-cookie flow: add a button "Use current browser cookie" that grabs the live cookie from the WebView2 and updates the account's stored cookie. This is the main use case for the embedded browser — re-auth without manual export.
+
+## Acceptance
+
+1. Open the detail panel for any account → click "Browser" tab → see a logged-in `roblox.com` page for that account.
+2. Open the same account's browser in a different tab from a different account → the two sessions are isolated (no cross-account cookie leak).
+3. Click "Use current browser cookie" → the stored `.ROBLOSECURITY` updates, future launches succeed with the new cookie.
+
+## Caveats
+
+- **Disk footprint.** WebView2 user-data folders can grow to 100+ MB each with cache. For 50 accounts that's 5 GB. Document this; consider an "evict cache" maintenance command.
+- **Memory.** Each WebView2 process is ~50–100 MB. Lazy-create on first browser open, not on app startup.
+- **WebView2 runtime.** If the runtime isn't installed, the WebView2 control silently fails to render. Detect this on startup and show a one-time install prompt (the bootstrapper download is < 2 MB).
+- **Roblox anti-automation.** The Roblox web flags certain automated patterns. Manual interaction in WebView2 should be indistinguishable from Edge / Chromium, but if Roblox starts blocking embedded WebView2 traffic, this feature breaks. No mitigation other than detect + report.
+
+## Estimated effort
+
+3–5 days end to end (WebView2 wiring is small; cookie isolation + UX polish + the "use current cookie" flow are the work).
+
+---
+
 ## How to convert these into GitHub issues
 
 Once the project moves to its permanent repo:

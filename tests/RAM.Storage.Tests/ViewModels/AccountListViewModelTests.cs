@@ -112,6 +112,9 @@ public class AccountListViewModelTests
         var vm = new AccountListViewModel(store, launcher, new FakeDialogService(), new FakeRejoinManager());
 
         await vm.LoadAsync();
+        // LaunchAsync now requires a sidebar Place ID — without one it routes to the
+        // LaunchDialog (avoiding the v1.0 bug where placeId=0 silently failed).
+        vm.LaunchPlaceId = "606849621";
         var item = vm.VisibleAccounts[0];
         await vm.LaunchAsync(item);
 

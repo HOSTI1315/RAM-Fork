@@ -39,6 +39,20 @@
         <KeyBinding Key="Escape" Command="{Binding CloseDialogCommand}" />
     </Window.InputBindings>
 
+    <!-- WindowChrome + WindowStyle="None" turns SystemCommands buttons into RoutedCommands
+         that need explicit CommandBindings to actually do anything. Without these
+         bindings the min/max/close buttons on the title bar are dead. -->
+    <Window.CommandBindings>
+        <CommandBinding Command="{x:Static SystemCommands.MinimizeWindowCommand}"
+                        Executed="OnMinimizeExecuted" />
+        <CommandBinding Command="{x:Static SystemCommands.MaximizeWindowCommand}"
+                        Executed="OnMaximizeExecuted" />
+        <CommandBinding Command="{x:Static SystemCommands.RestoreWindowCommand}"
+                        Executed="OnRestoreExecuted" />
+        <CommandBinding Command="{x:Static SystemCommands.CloseWindowCommand}"
+                        Executed="OnCloseExecuted" />
+    </Window.CommandBindings>
+
     <Grid x:Name="RootGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="32" />
@@ -100,11 +114,24 @@
                         <Path Data="M0,0 L10,0" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
                               StrokeThickness="1" Width="10" Height="1" />
                     </Button>
+                    <!-- Maximize ↔ Restore: command + tooltip swap by WindowState via DataTrigger.
+                         The icon is identical in both states (a plain square outline) — fine
+                         visually since the user can see whether the window is maximized. -->
                     <Button x:Name="MaxRestoreButton"
-                            Style="{StaticResource TitlebarButtonStyle}"
-                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                            Command="{x:Static SystemCommands.MaximizeWindowCommand}"
-                            ToolTip="Maximize">
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource TitlebarButtonStyle}">
+                                <Setter Property="Command" Value="{x:Static SystemCommands.MaximizeWindowCommand}" />
+                                <Setter Property="ToolTip" Value="Maximize" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                 Value="Maximized">
+                                        <Setter Property="Command" Value="{x:Static SystemCommands.RestoreWindowCommand}" />
+                                        <Setter Property="ToolTip" Value="Restore" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
                         <Path Data="M0,0 L10,0 L10,10 L0,10 Z"
                               Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
                               StrokeThickness="1" Width="10" Height="10" Fill="Transparent" />

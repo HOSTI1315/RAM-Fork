@@ -78,6 +78,9 @@ public class AccountListMultiSelectTests
 
         vm.SelectedItems.Add(vm.VisibleAccounts[0]);
         vm.SelectedItems.Add(vm.VisibleAccounts[2]);
+        // Bulk Launch needs a sidebar Place ID — without one each LaunchAsync would
+        // route to the LaunchDialog (which is the v1.1 bug-fix behaviour).
+        vm.LaunchPlaceId = "606849621";
 
         await vm.LaunchSelectedAsync();
 

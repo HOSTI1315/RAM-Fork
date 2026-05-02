@@ -45,6 +45,15 @@ public sealed partial class AccountListViewModel : ObservableObject
     [ObservableProperty]
     private bool isLoading;
 
+    /// <summary>Sidebar "Quick launch" Place ID. Applied to row Launch button + bulk Launch.
+    /// Empty → row Launch falls back to opening the LaunchDialog.</summary>
+    [ObservableProperty]
+    private string launchPlaceId = "";
+
+    /// <summary>Sidebar "Quick launch" Job ID (optional, requires PlaceId).</summary>
+    [ObservableProperty]
+    private string launchJobId = "";
+
     public int TotalCount => _all.Count;
     public int VisibleCount => VisibleAccounts.Count;
 
@@ -122,7 +131,31 @@ public sealed partial class AccountListViewModel : ObservableObject
     public async Task LaunchAsync(AccountItemViewModel? item, CancellationToken ct = default)
     {
         if (item is null) return;
-        await LaunchCustomAsync(item, new LaunchTarget.Place(0), ct);
+
+        // Try sidebar Place/Job inputs first. If they're empty or invalid, open the
+        // LaunchDialog so the user can specify a target rather than firing a launch
+        // with placeId=0 (which Roblox launcher silently rejects).
+        var target = TryBuildSidebarLaunchTarget();
+        if (target is null)
+        {
+            OpenLaunchDialog(item);
+            return;
+        }
+        await LaunchCustomAsync(item, target, ct);
+    }
+
+    /// <summary>Build a <see cref="LaunchTarget"/> from the sidebar Place/Job inputs,
+    /// or null if Place ID is missing/invalid.</summary>
+    private LaunchTarget? TryBuildSidebarLaunchTarget()
+    {
+        var placeStr = (LaunchPlaceId ?? "").Trim();
+        if (placeStr.Length == 0) return null;
+        if (!ulong.TryParse(placeStr, out var pid) || pid == 0) return null;
+
+        var jobStr = (LaunchJobId ?? "").Trim();
+        return jobStr.Length > 0
+            ? new LaunchTarget.Place(pid, jobStr)
+            : new LaunchTarget.Place(pid);
     }
 
     /// <summary>Launch with a custom <see cref="LaunchTarget"/> (used by LaunchDialog).</summary>
@@ -135,11 +168,20 @@ public sealed partial class AccountListViewModel : ObservableObject
         var result = await _launcher.LaunchAsync(new LaunchRequest(item.Account, target), ct);
         item.Status = result.IsSuccess ? AccountStatus.NotInGame : AccountStatus.Error;
 
+        if (!result.IsSuccess)
+        {
+            await _dialogs.ShowErrorAsync(
+                "Could not launch Roblox",
+                string.IsNullOrEmpty(result.Error)
+                    ? "Unknown error. Check that Roblox is installed and the account cookie is still valid."
+                    : result.Error);
+            return;
+        }
+
         // Hand off to the rejoin manager. The callback is marshalled to the UI thread by
         // the ViewModel — RejoinWorker fires it on its consumer thread, so we round-trip
-        // through the WPF dispatcher. The cast keeps RAM.App agnostic of WPF directly:
-        // any sync context captured by ConfigureAwait(true) here runs on UI.
-        if (result.IsSuccess && !item.IsDisabled)
+        // through the WPF dispatcher.
+        if (!item.IsDisabled)
         {
             _rejoinManager.OnAccountLaunched(
                 item.Account,
@@ -198,7 +240,8 @@ public sealed partial class AccountListViewModel : ObservableObject
         var snapshot = SelectedItems.ToList();
         SelectedItems.Clear();
         foreach (var item in snapshot)
-            Remove(item);
+            RemoveCore(item);
+        await PersistAsync(ct);
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
@@ -210,6 +253,7 @@ public sealed partial class AccountListViewModel : ObservableObject
             item.Account = item.Account with { Group = targetGroup };
         RebuildGroups();
         ApplyFilter();
+        _ = PersistAsync();
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
@@ -223,6 +267,7 @@ public sealed partial class AccountListViewModel : ObservableObject
             var newTags = new List<string>(item.Tags) { tag };
             item.Account = item.Account with { Tags = newTags };
         }
+        _ = PersistAsync();
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
@@ -266,10 +311,21 @@ public sealed partial class AccountListViewModel : ObservableObject
         ApplyFilter();
         OnPropertyChanged(nameof(TotalCount));
         RaiseEmptyState();
+        _ = PersistAsync();
         return vm;
     }
 
+    /// <summary>Public Remove — mutation + persistence. For batch use, prefer
+    /// <see cref="RemoveCore"/> + a single <see cref="PersistAsync"/> at the end.</summary>
     public void Remove(AccountItemViewModel item)
+    {
+        RemoveCore(item);
+        _ = PersistAsync();
+    }
+
+    /// <summary>Internal: in-memory remove without disk write. Used by batch operations
+    /// that save once at the end.</summary>
+    private void RemoveCore(AccountItemViewModel item)
     {
         _all.Remove(item);
         // Best-effort: tear down any watcher attached to this account. Runs in background;
@@ -280,6 +336,32 @@ public sealed partial class AccountListViewModel : ObservableObject
         OnPropertyChanged(nameof(TotalCount));
         RaiseEmptyState();
     }
+
+    /// <summary>
+    /// Persist the current list to <see cref="IAccountStore"/>. Errors are surfaced via
+    /// <see cref="IDialogService.ShowErrorAsync"/> rather than swallowed — silent
+    /// save-failure is the bug class that shipped in v1.0 and we don't want a repeat.
+    /// </summary>
+    public async Task PersistAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var snapshot = _all.Select(v => v.Account).ToList();
+            await _store.SaveAllAsync(snapshot, ct);
+        }
+        catch (OperationCanceledException) { /* shutdown */ }
+        catch (Exception ex)
+        {
+            try { await _dialogs.ShowErrorAsync("Could not save accounts", ex.Message); }
+            catch { /* dialog itself failed during shutdown — give up */ }
+        }
+    }
+
+    /// <summary>Find an in-memory row by UserId. Used by <c>ShellViewModel</c> after a
+    /// detail-panel save to propagate the updated <see cref="Account"/> back into the list.
+    /// Returns null if not found (e.g., concurrent removal).</summary>
+    public AccountItemViewModel? FindByUserId(ulong userId)
+        => _all.FirstOrDefault(v => v.UserId == userId);
 
     /// <summary>Called by AccountDetailViewModel after a save flips Disabled true.</summary>
     public void NotifyAccountDisabled(ulong userId) => _rejoinManager.OnAccountDisabled(userId);
