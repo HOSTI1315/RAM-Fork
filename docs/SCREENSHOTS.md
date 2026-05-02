@@ -71,4 +71,4 @@ What to show:
 
 - Don't include real cookies, real usernames, or real BrowserTrackerIDs in any screenshot. Redact or use throwaway test accounts.
 - Use the dark theme as the primary look — it's the default and the one most users will see first.
-- For the README, link directly to raw GitHub URLs (`https://github.com/USER/REPO/raw/main/docs/img/...`) so the images render in the GitHub Releases page too.
+- For the README, link directly to raw GitHub URLs (`https://github.com/HOSTI1315/RAM-Fork/raw/main/docs/img/...`) so the images render in the GitHub Releases page too.

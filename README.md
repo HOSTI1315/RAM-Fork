@@ -1,12 +1,12 @@
 # RAM Fork — Roblox Account Manager
 
-[![Build](https://img.shields.io/github/actions/workflow/status/USER/REPO/build.yml?branch=main&label=build)](https://github.com/USER/REPO/actions/workflows/build.yml)
-[![Latest release](https://img.shields.io/github/v/release/USER/REPO?include_prereleases&sort=semver)](https://github.com/USER/REPO/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/USER/REPO/total)](https://github.com/USER/REPO/releases)
-[![License](https://img.shields.io/github/license/USER/REPO)](LICENSE)
+[![Build](https://img.shields.io/github/actions/workflow/status/HOSTI1315/RAM-Fork/build.yml?branch=main&label=build)](https://github.com/HOSTI1315/RAM-Fork/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/HOSTI1315/RAM-Fork?include_prereleases&sort=semver)](https://github.com/HOSTI1315/RAM-Fork/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/HOSTI1315/RAM-Fork/total)](https://github.com/HOSTI1315/RAM-Fork/releases)
+[![License](https://img.shields.io/github/license/HOSTI1315/RAM-Fork)](LICENSE)
 
 <p align="center">
-  <a href="https://github.com/USER/REPO/releases/latest">
+  <a href="https://github.com/HOSTI1315/RAM-Fork/releases/latest">
     <img src="https://img.shields.io/badge/⬇%20Download-Latest%20Release-2ea44f?style=for-the-badge" alt="Download Latest Release" />
   </a>
 </p>
@@ -199,8 +199,8 @@ To be added. (Will be added by the project owner before the first public release
 Requirements: **.NET 10 SDK** on Windows.
 
 ```powershell
-git clone https://github.com/USER/REPO.git
-cd REPO
+git clone https://github.com/HOSTI1315/RAM-Fork.git
+cd RAM-Fork
 dotnet build RobloxAltManager.slnx -c Release
 dotnet run --project src/RAM.UI -c Release
 ```
