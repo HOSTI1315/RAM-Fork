@@ -1,0 +1,270 @@
+<Window x:Class="RAM.UI.Views.ShellView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        xmlns:vm="clr-namespace:RAM.App.ViewModels;assembly=RAM.App"
+        d:DataContext="{d:DesignInstance Type=vm:ShellViewModel}"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="{Binding Title}"
+        Height="820" Width="1280" MinHeight="600" MinWidth="980"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        AllowsTransparency="False"
+        Background="{DynamicResource BgSecondary}"
+        TextElement.Foreground="{DynamicResource FgPrimary}"
+        TextElement.FontFamily="{DynamicResource FontSans}"
+        TextElement.FontSize="{DynamicResource Fs13}"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="ClearType"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <!-- WindowChrome enables custom title bar while keeping native resize / drag /
+         min-max-restore. CaptionHeight matches our title bar (32px). -->
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="32"
+                            CornerRadius="0"
+                            GlassFrameThickness="0"
+                            UseAeroCaptionButtons="False"
+                            ResizeBorderThickness="6" />
+    </shell:WindowChrome.WindowChrome>
+
+    <!-- Esc closes any active overlay dialog. Window-level binding fires only when no
+         descendant has handled Esc (AccountListView's Esc only fires when its ListBox
+         has focus and SelectedItems is non-empty). -->
+    <Window.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding CloseDialogCommand}" />
+    </Window.InputBindings>
+
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32" />
+            <!-- title bar -->
+            <RowDefinition Height="*" />
+            <!-- shell content -->
+        </Grid.RowDefinitions>
+
+        <!-- =========================================================
+             TITLE BAR — drag region + brand + window controls
+             ========================================================= -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource BgPrimary}"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Brand -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Margin="12,0,0,0">
+                    <!-- Logo: accent square with inner cutout (matches HTML) -->
+                    <Grid Width="14" Height="14" VerticalAlignment="Center">
+                        <Border Background="{DynamicResource Accent}" CornerRadius="3" />
+                        <Border Background="{DynamicResource BgPrimary}" CornerRadius="1" Margin="3" />
+                    </Grid>
+                    <TextBlock Text="RAM"
+                               FontWeight="SemiBold"
+                               FontSize="12"
+                               Margin="8,0,0,0"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource FgPrimary}" />
+                    <TextBlock Text="—"
+                               FontSize="12"
+                               Margin="8,0,8,0"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource FgTertiary}" />
+                    <TextBlock Text="{Binding Title}"
+                               FontSize="12"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource FgSecondary}" />
+                </StackPanel>
+
+                <!-- Middle column is the implicit drag region (WindowChrome handles drag) -->
+
+                <!-- Window controls. WindowChrome.IsHitTestVisibleInChrome makes them
+                     clickable despite being in the caption region. SystemCommands wires
+                     them to native min/max/restore/close without code-behind. -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource TitlebarButtonStyle}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Command="{x:Static SystemCommands.MinimizeWindowCommand}"
+                            ToolTip="Minimize">
+                        <Path Data="M0,0 L10,0" Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                              StrokeThickness="1" Width="10" Height="1" />
+                    </Button>
+                    <Button x:Name="MaxRestoreButton"
+                            Style="{StaticResource TitlebarButtonStyle}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Command="{x:Static SystemCommands.MaximizeWindowCommand}"
+                            ToolTip="Maximize">
+                        <Path Data="M0,0 L10,0 L10,10 L0,10 Z"
+                              Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                              StrokeThickness="1" Width="10" Height="10" Fill="Transparent" />
+                    </Button>
+                    <Button Style="{StaticResource TitlebarCloseButtonStyle}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Command="{x:Static SystemCommands.CloseWindowCommand}"
+                            ToolTip="Close">
+                        <Path Data="M0,0 L10,10 M10,0 L0,10"
+                              Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                              StrokeThickness="1" Width="10" Height="10" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- =========================================================
+             SHELL CONTENT — 3-column layout
+             Left:   AccountListView (sidebar + list bundled)
+             Right:  AccountDetailView, slides in when ActiveDetail != null
+             ========================================================= -->
+        <Grid Grid.Row="1" ClipToBounds="True">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <!-- AccountListView -->
+                <!-- Fixed 380px column when ActiveDetail is set; collapses to 0 when null.
+                     Fixed (not Auto) so Step 7.3's TranslateTransform.X slide-in animation
+                     has a stable layout slot to render into. -->
+                <ColumnDefinition>
+                    <ColumnDefinition.Style>
+                        <Style TargetType="ColumnDefinition">
+                            <Setter Property="Width" Value="380" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ActiveDetail}" Value="{x:Null}">
+                                    <Setter Property="Width" Value="0" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ColumnDefinition.Style>
+                </ColumnDefinition>
+            </Grid.ColumnDefinitions>
+
+            <ContentControl Grid.Column="0"
+                            Content="{Binding AccountList}"
+                            Focusable="False" />
+
+            <!-- Detail panel: column width controls layout slot (380 when shown, 0 when
+                 null). Fixed width so the TranslateTransform.X slide-in has a stable
+                 slot to render into. Slide-IN animates X from 380→0 on EnterActions
+                 of the DataTrigger; slide-OUT is instant (column simply collapses). -->
+            <ContentControl Grid.Column="1"
+                            Width="380"
+                            Content="{Binding ActiveDetail}"
+                            Focusable="False">
+                <ContentControl.RenderTransform>
+                    <TranslateTransform X="0" />
+                </ContentControl.RenderTransform>
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ActiveDetail, Converter={StaticResource NullToVis}}"
+                                         Value="Visible">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                              From="380" To="0" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+            </ContentControl>
+        </Grid>
+
+        <!-- =========================================================
+             OVERLAY DIALOG — modal, spans both rows, sits above title
+             bar and shell content. Backdrop click + Esc both close.
+             Animation split: outer Grid runs the Opacity fade; inner
+             Border runs its own ScaleTransform — Storyboard.TargetName
+             can't cross Style boundaries.
+             ========================================================= -->
+        <Grid Grid.RowSpan="2"
+              Visibility="{Binding ActiveDialog, Converter={StaticResource NullToVis}}">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Opacity" Value="1" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ActiveDialog, Converter={StaticResource NullToVis}}"
+                                     Value="Visible">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                          From="0" To="1" Duration="0:0:0.15" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+
+            <!-- Backdrop: clicks anywhere outside the inner Border close the dialog -->
+            <Rectangle Fill="#A0000000">
+                <Rectangle.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding CloseDialogCommand}" />
+                </Rectangle.InputBindings>
+            </Rectangle>
+
+            <!-- Inner container — picks up the right View via DataTemplate on
+                 ContentControl. Scale 0.96→1.0 on enter (Discord pattern). -->
+            <Border x:Name="DialogContainer"
+                    Background="{DynamicResource BgElevated}"
+                    BorderBrush="{DynamicResource BorderDefault}"
+                    BorderThickness="1"
+                    CornerRadius="{DynamicResource RadiusLg}"
+                    Effect="{DynamicResource ShadowModal}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MaxWidth="640" MinWidth="380"
+                    MaxHeight="640"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <ScaleTransform ScaleX="1.0" ScaleY="1.0" />
+                </Border.RenderTransform>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ActiveDialog, Converter={StaticResource NullToVis}}"
+                                         Value="Visible">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                              From="0.96" To="1.0" Duration="0:0:0.15">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                              From="0.96" To="1.0" Duration="0:0:0.15">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <ContentControl Content="{Binding ActiveDialog}" />
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

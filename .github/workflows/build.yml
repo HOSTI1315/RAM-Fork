@@ -1,0 +1,48 @@
+name: build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build & test (windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Show .NET info
+        run: dotnet --info
+
+      - name: Restore
+        run: dotnet restore RobloxAltManager.slnx
+
+      - name: Build
+        run: dotnet build RobloxAltManager.slnx --configuration Release --no-restore
+
+      - name: Unit tests — RAM.Roblox.Tests
+        run: dotnet test tests/RAM.Roblox.Tests/RAM.Roblox.Tests.csproj --configuration Release --no-build --logger "trx;LogFileName=ram-roblox.trx"
+
+      - name: Unit tests — RAM.Storage.Tests
+        run: dotnet test tests/RAM.Storage.Tests/RAM.Storage.Tests.csproj --configuration Release --no-build --logger "trx;LogFileName=ram-storage.trx"
+
+      - name: Smoke tests — RAM.SmokeTests
+        run: dotnet run --project tests/RAM.SmokeTests --configuration Release --no-build
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
+          if-no-files-found: ignore

@@ -1,0 +1,108 @@
+<!-- Direct port of the light theme block from TestUI.html. Same keys as Tokens.Dark.xaml,
+     different values. Static; runtime swap planned via IThemeSource in Step 9. -->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- Spacing / radii / typography / row geometry / status are theme-agnostic and
+         reuse Tokens.Dark.xaml entries when both dictionaries are merged. We re-emit
+         only the entries that differ. To keep this file self-contained when used as
+         the active theme, we duplicate the theme-agnostic keys below. -->
+
+    <!-- ===== Spacing ===== -->
+    <Thickness x:Key="Space0">0</Thickness>
+    <Thickness x:Key="Space1">2</Thickness>
+    <Thickness x:Key="Space2">4</Thickness>
+    <Thickness x:Key="Space3">6</Thickness>
+    <Thickness x:Key="Space4">8</Thickness>
+    <Thickness x:Key="Space5">12</Thickness>
+    <Thickness x:Key="Space6">16</Thickness>
+    <Thickness x:Key="Space7">20</Thickness>
+    <Thickness x:Key="Space8">28</Thickness>
+
+    <sys:Double x:Key="Space0Px">0</sys:Double>
+    <sys:Double x:Key="Space1Px">2</sys:Double>
+    <sys:Double x:Key="Space2Px">4</sys:Double>
+    <sys:Double x:Key="Space3Px">6</sys:Double>
+    <sys:Double x:Key="Space4Px">8</sys:Double>
+    <sys:Double x:Key="Space5Px">12</sys:Double>
+    <sys:Double x:Key="Space6Px">16</sys:Double>
+    <sys:Double x:Key="Space7Px">20</sys:Double>
+    <sys:Double x:Key="Space8Px">28</sys:Double>
+
+    <CornerRadius x:Key="RadiusSm">4</CornerRadius>
+    <CornerRadius x:Key="RadiusMd">6</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">8</CornerRadius>
+    <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+
+    <FontFamily x:Key="FontSans">Inter, gg sans, Segoe UI, system-ui</FontFamily>
+    <FontFamily x:Key="FontMono">Cascadia Mono, JetBrains Mono, Consolas</FontFamily>
+
+    <sys:Double x:Key="Fs11">11</sys:Double>
+    <sys:Double x:Key="Fs12">12</sys:Double>
+    <sys:Double x:Key="Fs13">13</sys:Double>
+    <sys:Double x:Key="Fs14">14</sys:Double>
+    <sys:Double x:Key="Fs16">16</sys:Double>
+    <sys:Double x:Key="Fs20">20</sys:Double>
+
+    <FontWeight x:Key="FwRegular">Normal</FontWeight>
+    <FontWeight x:Key="FwMedium">Medium</FontWeight>
+    <FontWeight x:Key="FwSemibold">SemiBold</FontWeight>
+
+    <sys:Double x:Key="LhTight">1.2</sys:Double>
+    <sys:Double x:Key="LhNormal">1.4</sys:Double>
+
+    <sys:Double x:Key="RowH">56</sys:Double>
+    <sys:Double x:Key="RowHCompact">32</sys:Double>
+    <sys:Double x:Key="TitlebarH">32</sys:Double>
+
+    <SolidColorBrush x:Key="StatusOnline"  Color="#23A55A" />
+    <SolidColorBrush x:Key="StatusInGame"  Color="#5865F2" />
+    <SolidColorBrush x:Key="StatusOffline" Color="#80848E" />
+    <SolidColorBrush x:Key="StatusError"   Color="#F23F43" />
+    <SolidColorBrush x:Key="StatusPremium" Color="#F0B232" />
+
+    <!-- ===== Backgrounds (light theme) ===== -->
+    <SolidColorBrush x:Key="BgPrimary"   Color="#F2F3F5" />
+    <SolidColorBrush x:Key="BgSecondary" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="BgTertiary"  Color="#FFFFFF" />
+    <SolidColorBrush x:Key="BgElevated"  Color="#FFFFFF" />
+    <SolidColorBrush x:Key="BgHover"     Color="#EBEDEF" />
+    <SolidColorBrush x:Key="BgSelected"  Color="#E3E5E8" />
+    <SolidColorBrush x:Key="BgInput"     Color="#FFFFFF" />
+    <SolidColorBrush x:Key="BgDeepest"   Color="#E3E5E8" />
+
+    <!-- ===== Foregrounds ===== -->
+    <SolidColorBrush x:Key="FgPrimary"   Color="#060607" />
+    <SolidColorBrush x:Key="FgSecondary" Color="#4E5058" />
+    <SolidColorBrush x:Key="FgTertiary"  Color="#6D6F78" />
+    <SolidColorBrush x:Key="FgOnAccent"  Color="#FFFFFF" />
+
+    <!-- ===== Borders ===== -->
+    <SolidColorBrush x:Key="BorderSubtle"  Color="#E3E5E8" />
+    <SolidColorBrush x:Key="BorderDefault" Color="#D4D6DC" />
+    <SolidColorBrush x:Key="BorderStrong"  Color="#B5BAC1" />
+
+    <!-- ===== Accent ===== -->
+    <SolidColorBrush x:Key="Accent"        Color="#5865F2" />
+    <SolidColorBrush x:Key="AccentHover"   Color="#4752C4" />
+    <SolidColorBrush x:Key="AccentPressed" Color="#3C45A5" />
+    <!-- color-mix(in oklab, accent 14%, transparent) ≈ #5865F2 alpha 14% (0x24) -->
+    <SolidColorBrush x:Key="AccentSubtleBg" Color="#245865F2" />
+    <SolidColorBrush x:Key="AccentSubtleBgStrong" Color="#385865F2" />
+
+    <SolidColorBrush x:Key="BorderFocus" Color="#5865F2" />
+
+    <LinearGradientBrush x:Key="SkeletonBrush" StartPoint="0,0.5" EndPoint="1,0.5">
+        <GradientStop Color="#ECEDEF" Offset="0.0" />
+        <GradientStop Color="#F5F6F7" Offset="0.5" />
+        <GradientStop Color="#ECEDEF" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <DropShadowEffect x:Key="ShadowPopover" BlurRadius="16" ShadowDepth="4"
+                       Opacity="0.10" Color="#14161A" Direction="270" />
+    <DropShadowEffect x:Key="ShadowModal" BlurRadius="48" ShadowDepth="24"
+                       Opacity="0.18" Color="#14161A" Direction="270" />
+
+</ResourceDictionary>

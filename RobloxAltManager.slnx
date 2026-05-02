@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RAM.App/RAM.App.csproj" />
+    <Project Path="src/RAM.Core/RAM.Core.csproj" />
+    <Project Path="src/RAM.Plugins.Abstractions/RAM.Plugins.Abstractions.csproj" />
+    <Project Path="src/RAM.Roblox/RAM.Roblox.csproj" />
+    <Project Path="src/RAM.Storage/RAM.Storage.csproj" />
+    <Project Path="src/RAM.UI/RAM.UI.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RAM.Roblox.Tests/RAM.Roblox.Tests.csproj" />
+    <Project Path="tests/RAM.SmokeTests/RAM.SmokeTests.csproj" />
+    <Project Path="tests/RAM.Storage.Tests/RAM.Storage.Tests.csproj" />
+  </Folder>
+</Solution>

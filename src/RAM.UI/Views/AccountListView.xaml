@@ -1,0 +1,815 @@
+<UserControl x:Class="RAM.UI.Views.AccountListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:RAM.App.ViewModels;assembly=RAM.App"
+             xmlns:models="clr-namespace:RAM.Core.Models;assembly=RAM.Core"
+             xmlns:ctrl="clr-namespace:RAM.UI.Controls"
+             xmlns:b="clr-namespace:RAM.UI.Behaviors"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:AccountListViewModel}"
+             Background="{DynamicResource BgSecondary}"
+             Focusable="False">
+
+    <!-- Keyboard nav. Ctrl+A / Home / End / Shift+click are handled natively by the
+         ListBox in SelectionMode="Extended". InputBindings here add the non-native ones. -->
+    <UserControl.InputBindings>
+        <KeyBinding Key="Enter"  Command="{Binding LaunchSelectedCommand}" />
+        <KeyBinding Key="Delete" Command="{Binding DeleteSelectedCommand}" />
+        <KeyBinding Key="Escape" Command="{Binding ClearSelectionCommand}" />
+    </UserControl.InputBindings>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220" />
+            <!-- sidebar -->
+            <ColumnDefinition Width="*" />
+            <!-- list pane -->
+        </Grid.ColumnDefinitions>
+
+        <!-- ============================================================
+             SIDEBAR
+             ============================================================ -->
+        <Border Grid.Column="0"
+                Background="{DynamicResource BgPrimary}"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="0,0,1,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <!-- header -->
+                    <RowDefinition Height="Auto" />
+                    <!-- All accounts button -->
+                    <RowDefinition Height="*" />
+                    <!-- group ListBox -->
+                    <RowDefinition Height="Auto" />
+                    <!-- footer -->
+                </Grid.RowDefinitions>
+
+                <!-- Section header -->
+                <Grid Grid.Row="0" Margin="8,12,8,6">
+                    <TextBlock Text="GROUPS"
+                               FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource FgTertiary}"
+                               VerticalAlignment="Center"
+                               Margin="6,0,0,0" />
+                    <Button Style="{StaticResource IconButtonStyle}"
+                            ToolTip="New group"
+                            HorizontalAlignment="Right">
+                        <Path Data="{StaticResource IconPlus}"
+                              Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                              StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Stretch="Uniform" Width="14" Height="14" />
+                    </Button>
+                </Grid>
+
+                <!-- "All accounts" — separate Button (NOT inside ListBox) bound to
+                     ClearGroupCommand. Highlight when IsAllSelected via DataTrigger. -->
+                <Button Grid.Row="1"
+                        Command="{Binding ClearGroupCommand}"
+                        Margin="6,0,6,0"
+                        Cursor="Hand"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Grid>
+                                <Border x:Name="bg"
+                                        Background="Transparent"
+                                        CornerRadius="{DynamicResource RadiusSm}"
+                                        Height="32" />
+                                <Border x:Name="pill"
+                                        Background="{DynamicResource FgPrimary}"
+                                        CornerRadius="0,4,4,0"
+                                        Width="4" Height="0"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center"
+                                        Margin="-6,0,0,0"
+                                        IsHitTestVisible="False" />
+                                <Grid Margin="8,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Path Grid.Column="0" Data="{StaticResource IconUsers}"
+                                          Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                          StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          Stretch="Uniform" Width="14" Height="14"
+                                          Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="All accounts"
+                                               FontSize="13" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" />
+                                    <Border Grid.Column="2"
+                                            Background="{DynamicResource BgHover}"
+                                            CornerRadius="999" Padding="6,0" Height="16"
+                                            VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding TotalCount}"
+                                                   FontFamily="{DynamicResource FontMono}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource FgTertiary}"
+                                                   VerticalAlignment="Center" />
+                                    </Border>
+                                </Grid>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bg" Property="Background" Value="{DynamicResource BgHover}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource FgPrimary}" />
+                                    <Setter TargetName="pill" Property="Height" Value="10" />
+                                </Trigger>
+                                <DataTrigger Binding="{Binding IsAllSelected}" Value="True">
+                                    <Setter TargetName="bg" Property="Background" Value="{DynamicResource BgSelected}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource FgPrimary}" />
+                                    <Setter TargetName="pill" Property="Height" Value="20" />
+                                </DataTrigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderBrush" Value="Transparent" />
+                            <Setter Property="Foreground" Value="{DynamicResource FgSecondary}" />
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- Real groups (sorted by SortKey then name in VM) -->
+                <ListBox Grid.Row="2"
+                         Style="{StaticResource BareListBoxStyle}"
+                         ItemContainerStyle="{StaticResource GroupRowStyle}"
+                         ItemsSource="{Binding Groups}"
+                         SelectedItem="{Binding SelectedGroup}"
+                         SelectionMode="Single"
+                         Margin="6,4,6,0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}"
+                                       FontSize="13"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Footer: profile card -->
+                <Border Grid.Row="3"
+                        Background="{DynamicResource BgDeepest}"
+                        BorderBrush="{DynamicResource BorderSubtle}"
+                        BorderThickness="0,1,0,0"
+                        Padding="12,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="32" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Width="32" Height="32" CornerRadius="999">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#5865F2" Offset="0" />
+                                    <GradientStop Color="#EB459E" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <TextBlock Text="YT" Foreground="White" FontWeight="SemiBold"
+                                       FontSize="11" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="Local profile" FontSize="13" FontWeight="Medium"
+                                       Foreground="{DynamicResource FgPrimary}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="v0.4.2-alpha"
+                                       FontFamily="{DynamicResource FontMono}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource FgTertiary}" />
+                        </StackPanel>
+                        <Button Grid.Column="2" Style="{StaticResource IconButtonStyle}"
+                                ToolTip="Settings"
+                                Command="{Binding OpenSettingsCommand}">
+                            <Path Data="{StaticResource IconSettings}"
+                                  Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                  StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  Stretch="Uniform" Width="14" Height="14" />
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ============================================================
+             LIST PANE
+             ============================================================ -->
+        <Grid Grid.Column="1" x:Name="ListPaneRoot">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <!-- listheader (hidden in multi-select) -->
+                <RowDefinition Height="Auto" />
+                <!-- listmeta (hidden in multi-select) -->
+                <RowDefinition Height="Auto" />
+                <!-- bulkbar (visible in multi-select) -->
+                <RowDefinition Height="*" />
+                <!-- list -->
+            </Grid.RowDefinitions>
+
+            <!-- listheader -->
+            <Border Grid.Row="0"
+                    Background="{DynamicResource BgSecondary}"
+                    BorderBrush="{DynamicResource BorderDefault}"
+                    BorderThickness="0,0,0,1"
+                    Visibility="{Binding HasMultiSelection, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
+                <Grid Margin="16,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Search box -->
+                    <Border Grid.Column="0"
+                            Background="{DynamicResource BgInput}"
+                            BorderBrush="{DynamicResource BorderDefault}"
+                            BorderThickness="1"
+                            CornerRadius="{DynamicResource RadiusMd}"
+                            Height="30">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Path Grid.Column="0" Data="{StaticResource IconSearch}"
+                                  Stroke="{DynamicResource FgTertiary}"
+                                  StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  Stretch="Uniform" Width="14" Height="14"
+                                  Margin="12,0,8,0"
+                                  VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=120}"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     CaretBrush="{DynamicResource FgPrimary}"
+                                     SelectionBrush="{DynamicResource AccentSubtleBg}"
+                                     Foreground="{DynamicResource FgPrimary}"
+                                     FontSize="13"
+                                     VerticalContentAlignment="Center" />
+                            <Border Grid.Column="2"
+                                    BorderBrush="{DynamicResource BorderDefault}"
+                                    BorderThickness="1"
+                                    CornerRadius="{DynamicResource RadiusSm}"
+                                    Margin="0,0,8,0" Padding="5,1"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="Ctrl+K"
+                                           FontFamily="{DynamicResource FontMono}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource FgTertiary}" />
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <Button Grid.Column="1" Style="{StaticResource BtnStyle}"
+                            Command="{Binding RefreshCommand}"
+                            Margin="8,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconRefresh}"
+                                  Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                  StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  Stretch="Uniform" Width="14" Height="14" />
+                            <TextBlock Text="Refresh all" Margin="6,0,0,0"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="2" Style="{StaticResource BtnPrimaryStyle}"
+                            Command="{Binding AddAccountCommand}"
+                            Margin="8,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconPlus}"
+                                  Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                  StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  Stretch="Uniform" Width="14" Height="14" />
+                            <TextBlock Text="Add account" Margin="6,0,0,0"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- listmeta -->
+            <Border Grid.Row="1"
+                    Background="{DynamicResource BgSecondary}"
+                    BorderBrush="{DynamicResource BorderSubtle}"
+                    BorderThickness="0,0,0,1"
+                    Visibility="{Binding HasMultiSelection, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
+                <Grid Margin="16,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Showing"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource FgTertiary}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0" />
+                        <Border Background="{DynamicResource BgHover}" CornerRadius="999"
+                                Padding="8,2">
+                            <TextBlock VerticalAlignment="Center" FontSize="11">
+                                <Run Text="{Binding SelectedGroup, FallbackValue='All accounts', TargetNullValue='All accounts'}"
+                                     FontWeight="Medium"
+                                     Foreground="{DynamicResource FgPrimary}" />
+                            </TextBlock>
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                               FontSize="11"
+                               Foreground="{DynamicResource FgTertiary}"
+                               FontFamily="{DynamicResource FontMono}">
+                        <Run Text="{Binding VisibleCount, Mode=OneWay}" />
+                        <Run Text=" of " />
+                        <Run Text="{Binding TotalCount, Mode=OneWay}" />
+                    </TextBlock>
+                </Grid>
+            </Border>
+
+            <!-- bulkbar (visible when HasMultiSelection) -->
+            <Border Grid.Row="2"
+                    Background="{DynamicResource BgElevated}"
+                    BorderBrush="{DynamicResource BorderDefault}"
+                    BorderThickness="0,0,0,1"
+                    Visibility="{Binding HasMultiSelection, Converter={StaticResource BoolToVis}}">
+                <Grid Margin="16,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock FontSize="13" FontWeight="Medium"
+                                   Foreground="{DynamicResource FgPrimary}">
+                            <Run Text="{Binding SelectionCount, Mode=OneWay}" />
+                            <Run Text=" selected" />
+                        </TextBlock>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource BtnPrimaryStyle}" Height="26" Padding="10,0"
+                                Command="{Binding LaunchSelectedCommand}"
+                                Margin="0,0,6,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource IconPlay}"
+                                      Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                      Stretch="Uniform" Width="10" Height="10" />
+                                <TextBlock Text="Launch all" Margin="6,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource BtnStyle}" Height="26" Padding="10,0"
+                                Command="{Binding RefreshSelectedCommand}"
+                                Margin="0,0,6,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource IconRefresh}"
+                                      Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                      StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      Stretch="Uniform" Width="12" Height="12" />
+                                <TextBlock Text="Refresh" Margin="6,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource BtnStyle}" Height="26" Padding="10,0"
+                                Command="{Binding MoveSelectedToGroupCommand}"
+                                ToolTip="Move to group… (dialog wired in Step 7.4)"
+                                Margin="0,0,6,0"
+                                Content="Move…" />
+                        <Button Style="{StaticResource BtnStyle}" Height="26" Padding="10,0"
+                                Command="{Binding AddTagToSelectedCommand}"
+                                ToolTip="Add tag… (dialog wired in Step 7.4)"
+                                Margin="0,0,6,0"
+                                Content="Add tag" />
+                        <Button Style="{StaticResource BtnStyle}" Height="26" Padding="10,0"
+                                Command="{Binding DeleteSelectedCommand}"
+                                Foreground="{DynamicResource StatusError}"
+                                Margin="0,0,6,0"
+                                Content="Delete" />
+                        <Button Style="{StaticResource BtnStyle}" Height="26" Padding="10,0"
+                                Command="{Binding ClearSelectionCommand}"
+                                Background="Transparent" BorderBrush="Transparent"
+                                Content="Clear" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Empty state — visible when no accounts and not loading -->
+            <Grid Grid.Row="3"
+                  Background="{DynamicResource BgSecondary}"
+                  Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}">
+                <Border MaxWidth="440"
+                        Padding="32"
+                        CornerRadius="{DynamicResource RadiusLg}"
+                        Background="{DynamicResource BgElevated}"
+                        BorderBrush="{DynamicResource BorderDefault}"
+                        BorderThickness="1"
+                        VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <StackPanel HorizontalAlignment="Center">
+                        <Border Width="56" Height="56" CornerRadius="999"
+                                Background="{DynamicResource AccentSubtleBg}"
+                                HorizontalAlignment="Center" Margin="0,0,0,16">
+                            <Path Data="{StaticResource IconUsers}"
+                                  Stroke="{DynamicResource Accent}"
+                                  StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  Stretch="Uniform" Width="28" Height="28"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="Add your first account"
+                                   FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource FgPrimary}"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock TextAlignment="Center"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource FgSecondary}"
+                                   Margin="0,8,0,16"
+                                   TextWrapping="Wrap">
+                            <Run Text="Paste a " />
+                            <Run Text=".ROBLOSECURITY" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource FgPrimary}" />
+                            <Run Text=" cookie, sign in with username and password, or bulk-import from a list." />
+                        </TextBlock>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
+                            <Button Style="{StaticResource BtnPrimaryStyle}"
+                                    Command="{Binding AddAccountCommand}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="{StaticResource IconPlus}"
+                                          Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                          StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          Stretch="Uniform" Width="14" Height="14" />
+                                    <TextBlock Text="Add account" Margin="6,0,0,0" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource BtnStyle}" Margin="8,0,0,0"
+                                    Command="{Binding AddAccountCommand}"
+                                    ToolTip="Bulk import (Step 7.4 dialog)"
+                                    Content="Bulk import…" />
+                        </StackPanel>
+                        <TextBlock TextAlignment="Center"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource FgTertiary}">
+                            <Run Text="or press " />
+                            <Run Text="Ctrl+N"
+                                 FontFamily="{DynamicResource FontMono}"
+                                 Foreground="{DynamicResource FgSecondary}" />
+                            <Run Text=" to add" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Skeleton state — visible while loading and list is empty -->
+            <Grid Grid.Row="3"
+                  Background="{DynamicResource BgSecondary}"
+                  Visibility="{Binding ShowSkeleton, Converter={StaticResource BoolToVis}}">
+                <ItemsControl Focusable="False">
+                    <ItemsControl.ItemsSource>
+                        <x:Array Type="{x:Type sys:Int32}"
+                                 xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                            <sys:Int32>1</sys:Int32>
+                            <sys:Int32>2</sys:Int32>
+                            <sys:Int32>3</sys:Int32>
+                            <sys:Int32>4</sys:Int32>
+                            <sys:Int32>5</sys:Int32>
+                            <sys:Int32>6</sys:Int32>
+                        </x:Array>
+                    </ItemsControl.ItemsSource>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Height="56" Margin="16,0"
+                                  Background="Transparent">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="36" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="80" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Width="36" Height="36"
+                                        CornerRadius="{DynamicResource RadiusMd}"
+                                        Background="{DynamicResource SkeletonBrush}"
+                                        VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                                    <Border Height="11" Width="180"
+                                            CornerRadius="3"
+                                            Background="{DynamicResource SkeletonBrush}"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,0,0,6" />
+                                    <Border Height="9" Width="120"
+                                            CornerRadius="3"
+                                            Background="{DynamicResource SkeletonBrush}"
+                                            HorizontalAlignment="Left" />
+                                </StackPanel>
+                                <Border Grid.Column="2" Height="11" Width="60"
+                                        CornerRadius="3"
+                                        Background="{DynamicResource SkeletonBrush}"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+
+            <!-- Account list — multi-select Extended; SelectedItems synced via behavior.
+                 Visible only when there is data; Empty/Skeleton overlays handle the other
+                 states. -->
+            <ListBox Grid.Row="3"
+                     Style="{StaticResource BareListBoxStyle}"
+                     ItemContainerStyle="{StaticResource AccountRowStyle}"
+                     ItemsSource="{Binding VisibleAccounts}"
+                     SelectedItem="{Binding SelectedItem}"
+                     SelectionMode="Extended"
+                     Visibility="{Binding IsListVisible, Converter={StaticResource BoolToVis}}"
+                     b:ListBoxSelectedItemsBehavior.Binding="{Binding SelectedItems}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:AccountItemViewModel}">
+                        <!-- Tag pin: row's Grid.Tag = AccountListViewModel so ContextMenu
+                             items can reach it via PlacementTarget.Tag. -->
+                        <Grid Margin="16,0"
+                              Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Opacity" Value="1.0" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsDisabled}" Value="True">
+                                            <Setter Property="Opacity" Value="0.42" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+
+                            <Grid.ContextMenu>
+                                <ContextMenu>
+                                    <!-- Launch ▶ submenu — Quick launch (default Place(0)) +
+                                         4 mode-specific entries that open LaunchDialog. -->
+                                    <MenuItem Header="Launch">
+                                        <MenuItem Header="Quick launch"
+                                                  Command="{Binding PlacementTarget.Tag.LaunchCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext,
+                                                                              RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                        <Separator />
+                                        <MenuItem Header="Place ID…"
+                                                  Command="{Binding PlacementTarget.Tag.OpenLaunchDialogCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext,
+                                                                              RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                        <MenuItem Header="Job ID…"
+                                                  Command="{Binding PlacementTarget.Tag.OpenLaunchDialogCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext,
+                                                                              RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                        <MenuItem Header="Follow user…"
+                                                  Command="{Binding PlacementTarget.Tag.OpenLaunchDialogCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext,
+                                                                              RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                        <MenuItem Header="Private server…"
+                                                  Command="{Binding PlacementTarget.Tag.OpenLaunchDialogCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext,
+                                                                              RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                    </MenuItem>
+                                    <MenuItem Header="Re-auth"
+                                              Command="{Binding PlacementTarget.Tag.ReauthCommand,
+                                                                RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext,
+                                                                          RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                    <Separator />
+                                    <!-- Move to group ▶ {dynamic groups from VM} -->
+                                    <MenuItem Header="Move to group"
+                                              ItemsSource="{Binding PlacementTarget.Tag.Groups,
+                                                                     RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                        <MenuItem.ItemContainerStyle>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="Header" Value="{Binding}" />
+                                                <Setter Property="Command"
+                                                        Value="{Binding PlacementTarget.Tag.MoveSelectedToGroupCommand,
+                                                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <Setter Property="CommandParameter" Value="{Binding}" />
+                                            </Style>
+                                        </MenuItem.ItemContainerStyle>
+                                    </MenuItem>
+                                    <MenuItem Header="Add tag…"
+                                              ToolTip="Tag input dialog comes in a later iteration"
+                                              Command="{Binding PlacementTarget.Tag.AddTagToSelectedCommand,
+                                                                RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                    <Separator />
+                                    <MenuItem Header="Delete"
+                                              Foreground="{DynamicResource StatusError}"
+                                              Command="{Binding PlacementTarget.Tag.DeleteAccountCommand,
+                                                                RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext,
+                                                                          RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                </ContextMenu>
+                            </Grid.ContextMenu>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ctrl:AvatarWithStatus Grid.Column="0"
+                                                    Username="{Binding Username}"
+                                                    Status="{Binding PresenceType}"
+                                                    SurfaceBrush="{DynamicResource BgSecondary}"
+                                                    VerticalAlignment="Center" />
+
+                            <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontSize="13" FontWeight="Medium"
+                                               Foreground="{DynamicResource FgPrimary}"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="{Binding DisplayLine}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsDisabled}" Value="True">
+                                                        <Setter Property="TextDecorations" Value="Strikethrough" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontFamily="{DynamicResource FontMono}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource FgTertiary}">
+                                        <Run Text="@" /><Run Text="{Binding Username, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <Border Background="Transparent"
+                                            BorderBrush="{DynamicResource BorderDefault}"
+                                            BorderThickness="1"
+                                            CornerRadius="999"
+                                            Padding="8,1"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding Group, Converter={StaticResource NullToVis}}">
+                                        <TextBlock Text="{Binding Group}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource FgTertiary}" />
+                                    </Border>
+                                    <ctrl:WorkerStateBadge Margin="6,0,0,0"
+                                                            WorkerState="{Binding WorkerState}" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                                             Fill="{Binding PresenceType, Converter={StaticResource StatusToBrush}}" />
+                                    <TextBlock Margin="6,0,0,0"
+                                               Text="{Binding PresenceType, Converter={StaticResource PresenceLabel}}"
+                                               FontSize="11"
+                                               Foreground="{Binding PresenceType, Converter={StaticResource StatusToBrush}}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource FgTertiary}"
+                                               Visibility="{Binding LastLocation, Converter={StaticResource NullToVis}}">
+                                        <Run Text="·" /><Run Text=" " /><Run Text="{Binding LastLocation, Mode=OneWay}" />
+                                    </TextBlock>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Right: Robux + actions (Launch normally / Re-auth on Status==Error) -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Width="14" Height="14"
+                                            Background="{DynamicResource StatusPremium}"
+                                            CornerRadius="3"
+                                            VerticalAlignment="Center">
+                                        <TextBlock Text="R$"
+                                                   Foreground="#2A1F00"
+                                                   FontFamily="{DynamicResource FontMono}"
+                                                   FontSize="9" FontWeight="Bold"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Text="{Binding Robux, Converter={StaticResource NumberFormat}}"
+                                               Margin="6,0,0,0"
+                                               FontFamily="{DynamicResource FontMono}"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource FgPrimary}"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+
+                                <!-- Hover-revealed actions container -->
+                                <StackPanel Orientation="Horizontal" Margin="12,0,0,0"
+                                            VerticalAlignment="Center">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Opacity" Value="0" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                                             Value="True">
+                                                    <Setter Property="Opacity" Value="1" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                                             Value="True">
+                                                    <Setter Property="Opacity" Value="1" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+
+                                    <!-- Launch (visible unless Status == Error) -->
+                                    <Button ToolTip="Launch"
+                                            Command="{Binding DataContext.LaunchCommand,
+                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource IconButtonStyle}">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}"
+                                                                 Value="{x:Static models:AccountStatus.Error}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <Path Data="{StaticResource IconPlay}"
+                                              Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                              Stretch="Uniform" Width="12" Height="12" />
+                                    </Button>
+
+                                    <!-- Re-auth (visible only when Status == Error) -->
+                                    <Button Height="22" Padding="8,0"
+                                            FontSize="11"
+                                            Command="{Binding DataContext.ReauthCommand,
+                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Margin="0,0,4,0">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource BtnStyle}">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}"
+                                                                 Value="{x:Static models:AccountStatus.Error}">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="Re-auth" />
+                                    </Button>
+
+                                    <Button Style="{StaticResource IconButtonStyle}"
+                                            ToolTip="More">
+                                        <Path Data="{StaticResource IconMore}"
+                                              Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                              StrokeThickness="2.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                              Stretch="Uniform" Width="14" Height="14" />
+                                    </Button>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Inline error banner (cookie expired / re-auth needed). Spans
+                                 columns; visible only when Status == Error. The DataTemplate
+                                 keeps a single template; banner just appears via Visibility. -->
+                            <Border Grid.Column="0" Grid.ColumnSpan="3"
+                                    Margin="0,4,0,4"
+                                    Padding="12,8"
+                                    Background="#1AF23F43"
+                                    BorderBrush="#4DF23F43"
+                                    BorderThickness="1"
+                                    CornerRadius="{DynamicResource RadiusMd}"
+                                    VerticalAlignment="Bottom">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Status}"
+                                                         Value="{x:Static models:AccountStatus.Error}">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource StatusError}"
+                                               VerticalAlignment="Center">⚠</TextBlock>
+                                    <TextBlock Margin="8,0,0,0"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource FgSecondary}"
+                                               VerticalAlignment="Center">
+                                        <Run Text="Cookie expired or auth failed" FontWeight="Medium"
+                                             Foreground="{DynamicResource FgPrimary}" />
+                                        <Run Text=" — click Re-auth to refresh credentials." />
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </Grid>
+</UserControl>

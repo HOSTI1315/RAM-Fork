@@ -1,0 +1,112 @@
+<!-- Direct port of the dark theme block from TestUI.html. Names follow CSS conventions
+     (e.g. bg-primary → BgPrimary). Static brushes only; runtime swap via IThemeSource
+     is wired in Step 9. Until then, App.xaml hardcodes this dictionary as the first
+     MergedDictionary entry. -->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- ===== Spacing ===== -->
+    <Thickness x:Key="Space0">0</Thickness>
+    <Thickness x:Key="Space1">2</Thickness>
+    <Thickness x:Key="Space2">4</Thickness>
+    <Thickness x:Key="Space3">6</Thickness>
+    <Thickness x:Key="Space4">8</Thickness>
+    <Thickness x:Key="Space5">12</Thickness>
+    <Thickness x:Key="Space6">16</Thickness>
+    <Thickness x:Key="Space7">20</Thickness>
+    <Thickness x:Key="Space8">28</Thickness>
+
+    <sys:Double x:Key="Space0Px">0</sys:Double>
+    <sys:Double x:Key="Space1Px">2</sys:Double>
+    <sys:Double x:Key="Space2Px">4</sys:Double>
+    <sys:Double x:Key="Space3Px">6</sys:Double>
+    <sys:Double x:Key="Space4Px">8</sys:Double>
+    <sys:Double x:Key="Space5Px">12</sys:Double>
+    <sys:Double x:Key="Space6Px">16</sys:Double>
+    <sys:Double x:Key="Space7Px">20</sys:Double>
+    <sys:Double x:Key="Space8Px">28</sys:Double>
+
+    <!-- ===== Radii ===== -->
+    <CornerRadius x:Key="RadiusSm">4</CornerRadius>
+    <CornerRadius x:Key="RadiusMd">6</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">8</CornerRadius>
+    <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+
+    <!-- ===== Typography ===== -->
+    <FontFamily x:Key="FontSans">Inter, gg sans, Segoe UI, system-ui</FontFamily>
+    <FontFamily x:Key="FontMono">Cascadia Mono, JetBrains Mono, Consolas</FontFamily>
+
+    <sys:Double x:Key="Fs11">11</sys:Double>
+    <sys:Double x:Key="Fs12">12</sys:Double>
+    <sys:Double x:Key="Fs13">13</sys:Double>
+    <sys:Double x:Key="Fs14">14</sys:Double>
+    <sys:Double x:Key="Fs16">16</sys:Double>
+    <sys:Double x:Key="Fs20">20</sys:Double>
+
+    <FontWeight x:Key="FwRegular">Normal</FontWeight>
+    <FontWeight x:Key="FwMedium">Medium</FontWeight>
+    <FontWeight x:Key="FwSemibold">SemiBold</FontWeight>
+
+    <sys:Double x:Key="LhTight">1.2</sys:Double>
+    <sys:Double x:Key="LhNormal">1.4</sys:Double>
+
+    <!-- ===== Row geometry ===== -->
+    <sys:Double x:Key="RowH">56</sys:Double>
+    <sys:Double x:Key="RowHCompact">32</sys:Double>
+    <sys:Double x:Key="TitlebarH">32</sys:Double>
+
+    <!-- ===== Status colors (theme-agnostic Discord palette) ===== -->
+    <SolidColorBrush x:Key="StatusOnline"  Color="#23A55A" />
+    <SolidColorBrush x:Key="StatusInGame"  Color="#5865F2" />
+    <SolidColorBrush x:Key="StatusOffline" Color="#80848E" />
+    <SolidColorBrush x:Key="StatusError"   Color="#F23F43" />
+    <SolidColorBrush x:Key="StatusPremium" Color="#F0B232" />
+
+    <!-- ===== Backgrounds ===== -->
+    <SolidColorBrush x:Key="BgPrimary"   Color="#1E1F22" />
+    <SolidColorBrush x:Key="BgSecondary" Color="#2B2D31" />
+    <SolidColorBrush x:Key="BgTertiary"  Color="#313338" />
+    <SolidColorBrush x:Key="BgElevated"  Color="#2B2D31" />
+    <SolidColorBrush x:Key="BgHover"     Color="#35373C" />
+    <SolidColorBrush x:Key="BgSelected"  Color="#404249" />
+    <SolidColorBrush x:Key="BgInput"     Color="#1E1F22" />
+    <SolidColorBrush x:Key="BgDeepest"   Color="#1A1B1E" />
+
+    <!-- ===== Foregrounds ===== -->
+    <SolidColorBrush x:Key="FgPrimary"   Color="#F2F3F5" />
+    <SolidColorBrush x:Key="FgSecondary" Color="#B5BAC1" />
+    <SolidColorBrush x:Key="FgTertiary"  Color="#80848E" />
+    <SolidColorBrush x:Key="FgOnAccent"  Color="#FFFFFF" />
+
+    <!-- ===== Borders ===== -->
+    <SolidColorBrush x:Key="BorderSubtle"  Color="#1F2023" />
+    <SolidColorBrush x:Key="BorderDefault" Color="#3F4147" />
+    <SolidColorBrush x:Key="BorderStrong"  Color="#4E5058" />
+
+    <!-- ===== Accent ===== -->
+    <SolidColorBrush x:Key="Accent"        Color="#5865F2" />
+    <SolidColorBrush x:Key="AccentHover"   Color="#4752C4" />
+    <SolidColorBrush x:Key="AccentPressed" Color="#3C45A5" />
+    <!-- color-mix(in oklab, accent 18%, transparent) ≈ #5865F2 with alpha 18% (0x2E) -->
+    <SolidColorBrush x:Key="AccentSubtleBg" Color="#2E5865F2" />
+    <!-- 22% alpha variant used for selected group count badge -->
+    <SolidColorBrush x:Key="AccentSubtleBgStrong" Color="#385865F2" />
+
+    <SolidColorBrush x:Key="BorderFocus" Color="#5865F2" />
+
+    <!-- ===== Skeleton (static — animation added later via storyboard) ===== -->
+    <LinearGradientBrush x:Key="SkeletonBrush" StartPoint="0,0.5" EndPoint="1,0.5">
+        <GradientStop Color="#2B2D31" Offset="0.0" />
+        <GradientStop Color="#35373C" Offset="0.5" />
+        <GradientStop Color="#2B2D31" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <!-- ===== Shadow effects (port of shadow-popover / shadow-modal CSS tokens) ===== -->
+    <DropShadowEffect x:Key="ShadowPopover" BlurRadius="24" ShadowDepth="8"
+                       Opacity="0.4" Color="Black" Direction="270" />
+    <DropShadowEffect x:Key="ShadowModal" BlurRadius="64" ShadowDepth="24"
+                       Opacity="0.6" Color="Black" Direction="270" />
+
+</ResourceDictionary>

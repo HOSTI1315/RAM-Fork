@@ -1,0 +1,49 @@
+<Application x:Class="RAM.UI.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:RAM.App.ViewModels;assembly=RAM.App"
+             xmlns:views="clr-namespace:RAM.UI.Views"
+             xmlns:dlg="clr-namespace:RAM.UI.Views.Dialogs"
+             xmlns:conv="clr-namespace:RAM.UI.Converters"
+             ShutdownMode="OnMainWindowClose">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Tokens.Dark.xaml" />
+                <ResourceDictionary Source="Themes/Icons.xaml" />
+                <ResourceDictionary Source="Themes/Controls.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Shared converter instances. -->
+            <conv:StatusToBrushConverter x:Key="StatusToBrush" />
+            <conv:PresenceLabelConverter x:Key="PresenceLabel" />
+            <conv:NullToVisibilityConverter x:Key="NullToVis" />
+            <conv:BoolToVisibilityConverter x:Key="BoolToVis" />
+            <conv:InitialLetterConverter x:Key="InitialLetter" />
+            <conv:NumberFormatConverter x:Key="NumberFormat" />
+            <conv:IntEqualsConverter x:Key="IntEqualsConverter" />
+            <conv:IntEqualsToVisibilityConverter x:Key="IntEqualsToVisibility" />
+
+            <!-- Dialog VM → View mapping for ShellViewModel.ActiveDialog ContentControl. -->
+            <DataTemplate DataType="{x:Type vm:AddAccountViewModel}">
+                <dlg:AddAccountDialogView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:LaunchDialogViewModel}">
+                <dlg:LaunchDialogView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+                <dlg:SettingsDialogView />
+            </DataTemplate>
+
+            <!-- VM → View mapping. WPF resolves by inspecting DataContext type and
+                 picking the matching DataTemplate. Keeps ContentControl bindings clean
+                 throughout the app. -->
+            <DataTemplate DataType="{x:Type vm:AccountListViewModel}">
+                <views:AccountListView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:AccountDetailViewModel}">
+                <views:AccountDetailView />
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

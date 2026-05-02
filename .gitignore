@@ -1,0 +1,77 @@
+# =====================================================================
+# .NET / Visual Studio build artifacts
+# =====================================================================
+bin/
+obj/
+out/
+publish/
+artifacts/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.swp
+*.tmp
+
+# =====================================================================
+# IDE / editor metadata
+# =====================================================================
+.vs/
+.vscode/
+.idea/
+*.code-workspace
+
+# =====================================================================
+# Test / coverage output
+# =====================================================================
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+*.trx
+.coverlet/
+
+# =====================================================================
+# Per-user / runtime state (not source)
+# =====================================================================
+*.log
+*.pid
+*.seq
+*.lock
+
+# Roblox / RAM runtime data — never commit user data
+AppData/
+%AppData%/
+RAMSettings.ini
+AccountData.json
+*.bak
+
+# =====================================================================
+# Source-trees of upstream projects bundled for reference only.
+# These are read-only sources kept locally during the fork build;
+# they are not redistributed via this repository.
+# =====================================================================
+Sourese/
+
+# =====================================================================
+# Native / single-file publish outputs
+# =====================================================================
+*.pdb
+*.dll.config
+*.exe.config
+
+# Single-file publish targets (large, rebuilt on demand)
+*-win-x64.zip
+RAM.UI-*.exe
+
+# =====================================================================
+# Release artifacts produced by scripts/publish.ps1 — never commit these.
+# Releases are published as GitHub Release assets via release.yml, not
+# tracked in the repo.
+# =====================================================================
+release/
+
+# Defence-in-depth: even if someone moves a built .exe outside release/,
+# don't accept it into the index. Source is .cs / .xaml — there is no
+# legitimate reason for a tracked .exe in this repo.
+*.exe

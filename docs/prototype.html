@@ -1,0 +1,2340 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1280" />
+<title>RAM Fork — UI Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* =====================================================================
+   DESIGN TOKENS — port these to a WPF ResourceDictionary 1:1
+   ===================================================================== */
+:root {
+  /* spacing — port to <Thickness> resources */
+  --space-0: 0;
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 12px;
+  --space-6: 16px;
+  --space-7: 20px;
+  --space-8: 28px;
+
+  /* radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  /* type */
+  --font-sans: "Inter", "gg sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-20: 20px;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  --lh-tight: 1.2;
+  --lh-normal: 1.4;
+
+  /* row geometry */
+  --row-h: 56px;          /* account row */
+  --row-h-compact: 32px;  /* sidebar group row */
+  --titlebar-h: 32px;
+  --statebar-h: 36px;     /* prototype-only chrome */
+
+  /* status (theme-agnostic, semantic — Discord palette) */
+  --status-online:    #23A55A;
+  --status-ingame:    #5865F2;
+  --status-offline:   #80848E;
+  --status-error:     #F23F43;
+  --status-premium:   #F0B232;
+}
+
+/* ---------- DARK THEME ---------- */
+[data-theme="dark"] {
+  --bg-primary:    #1E1F22;   /* sidebar / titlebar */
+  --bg-secondary:  #2B2D31;   /* mid pane (list) */
+  --bg-tertiary:   #313338;   /* main content / detail */
+  --bg-elevated:   #2B2D31;   /* dropdowns, popovers, modals */
+  --bg-hover:      #35373C;
+  --bg-selected:   #404249;
+  --bg-input:      #1E1F22;
+  --bg-deepest:    #1A1B1E;   /* user card under sidebar, scrollbar thumb */
+
+  --fg-primary:   #F2F3F5;
+  --fg-secondary: #B5BAC1;
+  --fg-tertiary:  #80848E;
+  --fg-on-accent: #FFFFFF;
+
+  --border-subtle:  #1F2023;
+  --border-default: #3F4147;
+  --border-strong:  #4E5058;
+  --border-focus:   var(--accent);
+
+  --accent:           #5865F2;
+  --accent-hover:     #4752C4;
+  --accent-pressed:   #3C45A5;
+  --accent-subtle-bg: color-mix(in oklab, var(--accent) 18%, transparent);
+
+  --shadow-popover: 0 8px 24px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.3);
+  --shadow-modal:   0 24px 64px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4);
+
+  --skeleton: linear-gradient(90deg, #2B2D31 0%, #35373C 50%, #2B2D31 100%);
+}
+
+/* ---------- LIGHT THEME ---------- */
+[data-theme="light"] {
+  --bg-primary:    #F2F3F5;
+  --bg-secondary:  #FFFFFF;
+  --bg-tertiary:   #FFFFFF;
+  --bg-elevated:   #FFFFFF;
+  --bg-hover:      #EBEDEF;
+  --bg-selected:   #E3E5E8;
+  --bg-input:      #FFFFFF;
+  --bg-deepest:    #E3E5E8;
+
+  --fg-primary:   #060607;
+  --fg-secondary: #4E5058;
+  --fg-tertiary:  #6D6F78;
+  --fg-on-accent: #FFFFFF;
+
+  --border-subtle:  #E3E5E8;
+  --border-default: #D4D6DC;
+  --border-strong:  #B5BAC1;
+  --border-focus:   var(--accent);
+
+  --accent:           #5865F2;
+  --accent-hover:     #4752C4;
+  --accent-pressed:   #3C45A5;
+  --accent-subtle-bg: color-mix(in oklab, var(--accent) 14%, transparent);
+
+  --shadow-popover: 0 4px 16px rgba(20,22,26,0.10), 0 1px 3px rgba(20,22,26,0.06);
+  --shadow-modal:   0 24px 48px rgba(20,22,26,0.18), 0 4px 12px rgba(20,22,26,0.10);
+
+  --skeleton: linear-gradient(90deg, #ECEDEF 0%, #F5F6F7 50%, #ECEDEF 100%);
+}
+
+/* =====================================================================
+   RESET / BASE
+   ===================================================================== */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body {
+  background: var(--bg-primary);
+  color: var(--fg-primary);
+  font-family: var(--font-sans);
+  font-size: var(--fs-13);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-width: 1280px;
+  overflow-x: auto;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+input, textarea, select { font: inherit; color: inherit; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+::selection { background: var(--accent-subtle-bg); }
+
+/* scrollbars (port: native WPF scrollbar template equivalent) */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--bg-deepest); border-radius: var(--radius-pill); border: 2px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background: #111214; border: 2px solid transparent; background-clip: padding-box; }
+[data-theme="light"] *::-webkit-scrollbar-thumb { background: var(--border-default); }
+[data-theme="light"] *::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+/* =====================================================================
+   PROTOTYPE-ONLY CHROME — state switcher (NOT part of the app)
+   ===================================================================== */
+.protochrome {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  height: var(--statebar-h);
+  padding: 0 var(--space-6);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-default);
+  font-size: var(--fs-12);
+  color: var(--fg-secondary);
+}
+.protochrome .label { color: var(--fg-tertiary); text-transform: uppercase; letter-spacing: 0.06em; font-size: var(--fs-11); }
+.protochrome .tabs { display: flex; gap: var(--space-1); flex: 1; flex-wrap: wrap; }
+.protochrome .tab {
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-sm);
+  color: var(--fg-secondary);
+  cursor: pointer;
+}
+.protochrome .tab:hover { background: var(--bg-hover); color: var(--fg-primary); }
+.protochrome .tab[aria-selected="true"] { background: var(--accent-subtle-bg); color: var(--fg-primary); }
+.protochrome .theme-toggle {
+  display: inline-flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+}
+.protochrome .theme-toggle:hover { border-color: var(--border-strong); }
+
+/* =====================================================================
+   STATE FRAMES — each is a fully-rendered desktop window
+   ===================================================================== */
+.state {
+  display: none;
+  padding: var(--space-7);
+  background: var(--bg-primary);
+}
+.state[data-active="true"] { display: block; }
+.state-title {
+  font-size: var(--fs-12);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-tertiary);
+  margin: 0 0 var(--space-5);
+  font-weight: var(--fw-semibold);
+}
+
+/* =====================================================================
+   APP WINDOW — the WPF ShellView equivalent
+   ===================================================================== */
+.window {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  height: 820px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: var(--titlebar-h) 1fr;
+  box-shadow: var(--shadow-modal);
+  position: relative;
+  isolation: isolate;
+}
+
+/* ---------- title bar ---------- */
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-5);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-default);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.titlebar .brand { display: inline-flex; align-items: center; gap: var(--space-4); font-size: var(--fs-12); color: var(--fg-secondary); }
+.titlebar .brand .logo {
+  width: 14px; height: 14px; border-radius: 3px;
+  background: var(--accent);
+  position: relative;
+}
+.titlebar .brand .logo::after {
+  content: ""; position: absolute; inset: 3px; border-radius: 1px;
+  background: var(--bg-primary);
+}
+.titlebar .brand strong { color: var(--fg-primary); font-weight: var(--fw-semibold); letter-spacing: 0.02em; }
+.titlebar .brand .sep { color: var(--fg-tertiary); }
+.titlebar .winctrl { display: flex; gap: var(--space-1); }
+.titlebar .winctrl button {
+  width: 28px; height: 24px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fg-secondary);
+  border-radius: var(--radius-sm);
+}
+.titlebar .winctrl button:hover { background: var(--bg-hover); }
+.titlebar .winctrl button.close:hover { background: oklch(0.55 0.20 25); color: white; }
+
+/* ---------- shell grid ---------- */
+.shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  height: 100%;
+  min-height: 0;
+}
+.shell.with-detail { grid-template-columns: 220px 1fr 380px; }
+
+/* =====================================================================
+   SIDEBAR — Groups
+   ===================================================================== */
+.sidebar {
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-default);
+  display: flex; flex-direction: column;
+  min-height: 0;
+}
+.sidebar-section {
+  padding: var(--space-5) var(--space-4) var(--space-3);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sidebar-section .heading {
+  font-size: var(--fs-11);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-tertiary);
+  font-weight: var(--fw-semibold);
+}
+.icon-btn {
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fg-secondary);
+  border-radius: var(--radius-sm);
+}
+.icon-btn:hover { background: var(--bg-hover); color: var(--fg-primary); }
+
+.group-list { padding: 0 var(--space-3) var(--space-5); display: flex; flex-direction: column; gap: 1px; }
+.group-row {
+  height: var(--row-h-compact);
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  color: var(--fg-secondary);
+  font-size: var(--fs-13);
+  cursor: pointer;
+}
+.group-row:hover { background: var(--bg-hover); color: var(--fg-primary); }
+.group-row[aria-selected="true"] { background: var(--bg-selected); color: var(--fg-primary); }
+/* Discord-style active indicator on sidebar group rows */
+.group-row { position: relative; }
+.group-row::before {
+  content: ""; position: absolute; left: calc(var(--space-3) * -1); top: 50%;
+  width: 4px; height: 0%;
+  background: var(--fg-primary);
+  border-radius: 0 4px 4px 0;
+  transform: translateY(-50%);
+  transition: height 0.15s ease;
+}
+.group-row:hover::before { height: 32%; }
+.group-row[aria-selected="true"]::before { height: 60%; }
+.group-row .gicon { color: var(--fg-tertiary); display: inline-flex; }
+.group-row[aria-selected="true"] .gicon { color: var(--accent); }
+.group-row .gname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.group-row .gprefix { font-family: var(--font-mono); color: var(--fg-tertiary); font-size: var(--fs-11); }
+.group-row .gcount {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-11);
+  color: var(--fg-tertiary);
+  background: var(--bg-hover);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-3);
+  min-width: 22px; text-align: center;
+}
+.group-row[aria-selected="true"] .gcount { background: color-mix(in oklab, var(--accent) 22%, transparent); color: var(--fg-primary); }
+
+/* User card — fixed plate at the bottom of the sidebar (Discord pattern) */
+.sidebar-footer {
+  margin-top: auto;
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-deepest);
+  border-top: 1px solid var(--border-subtle);
+  display: flex; align-items: center; gap: var(--space-4);
+  font-size: var(--fs-12);
+  color: var(--fg-secondary);
+}
+.sidebar-footer .me-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, #5865F2, #EB459E);
+  color: white; display: inline-flex; align-items: center; justify-content: center;
+  font-size: var(--fs-11); font-weight: var(--fw-semibold);
+  flex: none;
+}
+.sidebar-footer .me-info { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.sidebar-footer .me-name { color: var(--fg-primary); font-size: var(--fs-13); font-weight: var(--fw-medium); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-footer .me-sub { color: var(--fg-tertiary); font-size: var(--fs-11); font-family: var(--font-mono); }
+
+/* =====================================================================
+   LIST PANE — VisibleAccounts
+   ===================================================================== */
+.listpane {
+  display: flex; flex-direction: column;
+  background: var(--bg-secondary);
+  min-width: 0;
+  min-height: 0;
+}
+
+.listheader {
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-secondary);
+}
+.searchbox {
+  flex: 1;
+  display: flex; align-items: center; gap: var(--space-4);
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-5);
+  height: 30px;
+  color: var(--fg-secondary);
+}
+.searchbox:focus-within { border-color: var(--border-focus); box-shadow: 0 0 0 2px var(--accent-subtle-bg); }
+.searchbox input {
+  flex: 1; background: transparent; border: 0; outline: 0;
+  color: var(--fg-primary); font-size: var(--fs-13);
+}
+.searchbox input::placeholder { color: var(--fg-tertiary); }
+.searchbox .kbd {
+  font-family: var(--font-mono); font-size: var(--fs-11);
+  color: var(--fg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: var(--space-3);
+  padding: 0 var(--space-5); height: 30px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-13);
+  color: var(--fg-primary);
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg-hover); border-color: var(--border-strong); }
+.btn[aria-pressed="true"], .btn.active { background: var(--bg-selected); border-color: color-mix(in oklab, var(--accent) 50%, transparent); color: var(--fg-primary); }
+.btn-primary {
+  background: var(--accent); border-color: var(--accent); color: var(--fg-on-accent);
+  padding: 0 var(--space-6);
+  font-weight: var(--fw-medium);
+  transition: background 0.17s ease, border-color 0.17s ease;
+}
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-primary:active { background: var(--accent-pressed); border-color: var(--accent-pressed); }
+.btn-primary:disabled, .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-danger { background: oklch(0.55 0.20 25); border-color: oklch(0.55 0.20 25); color: white; }
+.btn-danger:hover { background: oklch(0.50 0.20 25); }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: var(--bg-hover); }
+.btn-sm { height: 26px; padding: 0 var(--space-4); font-size: var(--fs-12); }
+
+.listmeta {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fs-11);
+  color: var(--fg-tertiary);
+  background: var(--bg-secondary);
+}
+.listmeta .filters { display: flex; align-items: center; gap: var(--space-5); }
+.listmeta .pill-filter {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: 2px var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--bg-hover);
+  color: var(--fg-secondary);
+  font-size: var(--fs-11);
+}
+.listmeta .pill-filter strong { color: var(--fg-primary); font-weight: var(--fw-medium); }
+.listmeta .count { font-variant-numeric: tabular-nums; }
+
+.list { flex: 1; overflow: auto; }
+
+/* ---------- account row ---------- */
+.acct {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: var(--space-5);
+  align-items: center;
+  height: var(--row-h);
+  padding: 0 var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  position: relative;
+}
+.acct:hover { background: var(--bg-hover); }
+.acct[aria-selected="true"] {
+  background: var(--bg-selected);
+}
+/* Discord-style active indicator: 4px white pill on the left edge */
+.acct::before {
+  content: ""; position: absolute; left: 0; top: 50%;
+  width: 4px; height: 0%;
+  background: var(--fg-primary);
+  border-radius: 0 4px 4px 0;
+  transform: translateY(-50%);
+  transition: height 0.15s ease;
+}
+.acct:hover::before { height: 32%; }
+.acct[aria-selected="true"]::before { height: 60%; }
+.acct[data-disabled="true"] { opacity: 0.42; }
+.acct[data-disabled="true"] .acct-display { text-decoration: line-through; text-decoration-color: var(--fg-tertiary); }
+
+.acct-multicheck {
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 3px;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: none;
+}
+.acct-multicheck[data-checked="true"] {
+  background: var(--accent); border-color: var(--accent);
+  color: var(--fg-on-accent);
+}
+.acct-multicheck[data-checked="true"] svg { display: block; }
+.acct-multicheck svg { display: none; }
+
+.avatar {
+  width: 36px; height: 36px; border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fg-secondary);
+  font-size: var(--fs-12); font-weight: var(--fw-semibold);
+  flex: none;
+  position: relative;
+  overflow: hidden;
+}
+.avatar.size-lg { width: 64px; height: 64px; font-size: var(--fs-20); border-radius: var(--radius-lg); }
+.avatar.size-xl { width: 96px; height: 96px; font-size: 32px; border-radius: var(--radius-lg); }
+/* placeholder striped fill — avoids fake portraits */
+.avatar.placeholder {
+  background:
+    repeating-linear-gradient(135deg,
+      color-mix(in oklab, var(--fg-secondary) 8%, transparent) 0 4px,
+      transparent 4px 8px),
+    var(--bg-elevated);
+}
+.avatar .initial { position: relative; z-index: 1; }
+.avatar .premium-ring {
+  position: absolute; inset: -2px; border-radius: inherit;
+  border: 2px solid var(--status-premium);
+  pointer-events: none;
+}
+
+.acct-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.acct-line1 {
+  display: flex; align-items: center; gap: var(--space-4);
+  min-width: 0;
+}
+.acct-display {
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  color: var(--fg-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  min-width: 0;
+}
+.acct-alias {
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
+  color: var(--fg-primary);
+}
+.acct-username-secondary {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  color: var(--fg-tertiary);
+  white-space: nowrap;
+}
+.acct-line2 {
+  display: flex; align-items: center; gap: var(--space-4);
+  font-size: var(--fs-11);
+  color: var(--fg-secondary);
+  min-width: 0;
+}
+.acct-status {
+  display: inline-flex; align-items: center; gap: var(--space-3);
+  white-space: nowrap;
+}
+/* inline status dot (used in status-text rows) — small, no halo */
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.dot.online   { background: var(--status-online); }
+.dot.ingame   { background: var(--status-ingame); }
+.dot.offline  { background: var(--status-offline); }
+.dot.error    { background: var(--status-error); }
+
+/* avatar-overlay status dot (Discord-style) — bottom-right, ringed by surface */
+.avatar { position: relative; }
+.avatar > .status {
+  position: absolute; right: -2px; bottom: -2px;
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 3px solid var(--bg-secondary);
+  box-sizing: border-box;
+}
+.avatar.size-lg > .status { width: 18px; height: 18px; right: -1px; bottom: -1px; border-width: 4px; border-color: var(--bg-tertiary); }
+.avatar > .status.online  { background: var(--status-online); }
+.avatar > .status.ingame  { background: var(--status-ingame); }
+.avatar > .status.offline { background: var(--status-offline); }
+.avatar > .status.error   { background: var(--status-error); }
+/* in-list avatars sit on bg-secondary or bg-hover; selected row uses bg-selected */
+.acct[aria-selected="true"] .avatar > .status { border-color: var(--bg-selected); }
+.acct:hover:not([aria-selected="true"]) .avatar > .status { border-color: var(--bg-hover); }
+.acct-status.online   { color: var(--status-online); }
+.acct-status.ingame   { color: var(--status-ingame); }
+.acct-status.offline  { color: var(--fg-tertiary); }
+.acct-status.error    { color: var(--status-error); }
+
+.acct-presence { color: var(--fg-tertiary); white-space: nowrap; }
+.acct-location { color: var(--fg-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: 1px var(--space-4);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-11);
+  background: var(--bg-elevated);
+  color: var(--fg-secondary);
+  border: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+.chip-accent { background: var(--accent-subtle-bg); color: var(--fg-primary); border-color: transparent; }
+.chip-group  { background: transparent; color: var(--fg-tertiary); border-color: var(--border-default); }
+.chip-removable {
+  background: var(--bg-hover); padding-right: 2px;
+}
+.chip-removable button {
+  width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; color: var(--fg-tertiary);
+}
+.chip-removable button:hover { background: var(--border-default); color: var(--fg-primary); }
+
+.acct-right {
+  display: flex; align-items: center; gap: var(--space-5);
+  flex: none;
+}
+.robux {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-12);
+  color: var(--fg-primary);
+}
+.robux .rsymbol {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  background: var(--status-premium);
+  color: #2A1F00;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.acct-tags { display: inline-flex; gap: var(--space-2); }
+.acct-actions {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  opacity: 0; transition: opacity 0.1s;
+}
+.acct:hover .acct-actions, .acct[aria-selected="true"] .acct-actions { opacity: 1; }
+
+/* ---------- error banner inside row ---------- */
+.acct.has-banner { height: auto; padding: var(--space-4) var(--space-6) 0; align-items: flex-start; grid-template-columns: 36px 1fr auto; }
+.acct .row-banner {
+  grid-column: 1 / -1;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-4);
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: color-mix(in oklab, var(--status-error) 10%, transparent);
+  border: 1px solid color-mix(in oklab, var(--status-error) 30%, transparent);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-12);
+  color: var(--fg-primary);
+}
+.acct .row-banner .icon { color: var(--status-error); display: inline-flex; }
+.acct .row-banner .msg { flex: 1; color: var(--fg-secondary); }
+.acct .row-banner strong { color: var(--fg-primary); font-weight: var(--fw-medium); }
+
+/* =====================================================================
+   DETAIL PANEL — slide-in
+   ===================================================================== */
+.detail {
+  background: var(--bg-tertiary);
+  border-left: 1px solid var(--border-default);
+  display: flex; flex-direction: column;
+  min-height: 0;
+  animation: slidein 220ms cubic-bezier(.2,.7,.2,1);
+}
+@keyframes slidein {
+  from { transform: translateX(20px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.detail-header {
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; flex-direction: column; gap: var(--space-5);
+}
+.detail-header .row { display: flex; align-items: center; gap: var(--space-5); }
+.detail-header .right { margin-left: auto; display: inline-flex; gap: var(--space-2); }
+.detail-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.detail-name .alias {
+  font-size: var(--fs-16); font-weight: var(--fw-semibold); color: var(--fg-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.detail-name .username {
+  font-family: var(--font-mono); font-size: var(--fs-12); color: var(--fg-secondary);
+}
+.detail-status-row {
+  display: flex; align-items: center; gap: var(--space-5);
+  font-size: var(--fs-12);
+  color: var(--fg-secondary);
+  flex-wrap: wrap;
+}
+.detail-actions {
+  display: flex; gap: var(--space-3); padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-tertiary);
+  position: sticky; top: 0; z-index: 1;
+}
+.detail-actions .btn { flex: 1; justify-content: center; }
+.detail-body { flex: 1; overflow: auto; padding: 0 var(--space-6) var(--space-7); }
+
+.field-section { padding: var(--space-6) 0; border-bottom: 1px solid var(--border-subtle); }
+.field-section:last-child { border-bottom: 0; }
+.field-section h4 {
+  margin: 0 0 var(--space-5);
+  font-size: var(--fs-11);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-tertiary);
+  font-weight: var(--fw-semibold);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.field { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-5); }
+.field:last-child { margin-bottom: 0; }
+.field label {
+  font-size: var(--fs-11);
+  color: var(--fg-tertiary);
+  display: flex; align-items: center; gap: var(--space-3);
+}
+.field label .dirty {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+}
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.field-row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+.input, .textarea, .select {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  font-size: var(--fs-13);
+  color: var(--fg-primary);
+  outline: 0;
+  font-family: inherit;
+}
+.input:focus, .textarea:focus, .select:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px var(--accent-subtle-bg); }
+.textarea { resize: vertical; min-height: 64px; line-height: var(--lh-normal); }
+.select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none'><path d='M2 4l3 3 3-3' stroke='%239DA1A8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 28px;
+}
+.input.mono, .textarea.mono { font-family: var(--font-mono); font-size: var(--fs-12); }
+
+.kv-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.kv-row { display: grid; grid-template-columns: 1fr 1fr 28px; gap: var(--space-3); align-items: center; }
+.kv-row .icon-btn { width: 28px; height: 28px; border: 1px solid var(--border-default); border-radius: var(--radius-md); }
+
+.chip-editor {
+  display: flex; flex-wrap: wrap; gap: var(--space-3);
+  padding: var(--space-3) var(--space-3);
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  min-height: 32px;
+}
+.chip-editor input {
+  flex: 1; min-width: 80px; background: transparent; border: 0; outline: 0;
+  color: var(--fg-primary); padding: 2px 4px; font-size: var(--fs-12);
+}
+
+.info-grid { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-3) var(--space-5); font-size: var(--fs-12); }
+.info-grid dt { color: var(--fg-tertiary); }
+.info-grid dd { margin: 0; color: var(--fg-primary); }
+.info-grid dd.mono { font-family: var(--font-mono); font-size: var(--fs-11); }
+
+.recent-games { display: flex; flex-direction: column; gap: var(--space-3); }
+.recent-game {
+  display: grid; grid-template-columns: 32px 1fr auto;
+  gap: var(--space-4); align-items: center;
+  padding: var(--space-3); border-radius: var(--radius-md);
+}
+.recent-game:hover { background: var(--bg-hover); }
+.recent-game .thumb { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--bg-elevated); }
+.recent-game .name { font-size: var(--fs-12); color: var(--fg-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.recent-game .meta { font-size: var(--fs-11); color: var(--fg-tertiary); font-family: var(--font-mono); }
+
+/* =====================================================================
+   BULK TOOLBAR
+   ===================================================================== */
+.bulkbar {
+  display: flex; align-items: center; gap: var(--space-5);
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-default);
+  font-size: var(--fs-12);
+  color: var(--fg-primary);
+}
+.bulkbar .count {
+  display: inline-flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent);
+  color: var(--fg-on-accent);
+  border-radius: var(--radius-md);
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+}
+.bulkbar .actions { display: flex; gap: var(--space-2); margin-left: auto; }
+
+/* =====================================================================
+   MODAL / DIALOG
+   ===================================================================== */
+.modal-backdrop {
+  position: absolute; inset: 0;
+  background: color-mix(in oklab, black 50%, transparent);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+  backdrop-filter: blur(2px);
+}
+[data-theme="light"] .modal-backdrop { background: color-mix(in oklab, #15171A 30%, transparent); }
+.modal {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  display: flex; flex-direction: column;
+  max-height: 80%;
+}
+.modal-sm { width: 420px; }
+.modal-md { width: 560px; }
+.modal-lg { width: 720px; }
+.modal-header {
+  padding: var(--space-6);
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.modal-header .title { font-size: var(--fs-14); font-weight: var(--fw-semibold); }
+.modal-header .subtitle { font-size: var(--fs-12); color: var(--fg-secondary); margin-top: 2px; }
+.modal-body { padding: var(--space-6); overflow: auto; }
+.modal-footer {
+  padding: var(--space-5) var(--space-6);
+  border-top: 1px solid var(--border-subtle);
+  display: flex; justify-content: flex-end; gap: var(--space-3);
+}
+.modal-footer .left { margin-right: auto; display: flex; align-items: center; gap: var(--space-3); color: var(--fg-tertiary); font-size: var(--fs-12); }
+
+/* tabs (used inside Add Account dialog) */
+.tabs-row {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border-default);
+  margin: calc(var(--space-6) * -1) calc(var(--space-6) * -1) var(--space-6);
+  padding: 0 var(--space-6);
+}
+.tabs-row .tab-btn {
+  padding: var(--space-5) var(--space-5);
+  font-size: var(--fs-13);
+  color: var(--fg-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.tabs-row .tab-btn:hover { color: var(--fg-primary); }
+.tabs-row .tab-btn[aria-selected="true"] { color: var(--fg-primary); border-bottom-color: var(--accent); }
+
+/* radio + checkbox */
+.radio-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.radio {
+  display: grid; grid-template-columns: 16px 1fr;
+  gap: var(--space-4); align-items: start;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.radio:hover { border-color: var(--border-strong); }
+.radio[aria-checked="true"] {
+  border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+  background: var(--accent-subtle-bg);
+}
+.radio .rdot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  margin-top: 2px;
+  position: relative;
+}
+.radio[aria-checked="true"] .rdot { border-color: var(--accent); }
+.radio[aria-checked="true"] .rdot::after {
+  content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent);
+}
+.radio .rmain .rtitle { font-size: var(--fs-13); color: var(--fg-primary); font-weight: var(--fw-medium); }
+.radio .rmain .rdesc { font-size: var(--fs-12); color: var(--fg-secondary); margin-top: 2px; }
+
+.toggle {
+  width: 30px; height: 18px; border-radius: var(--radius-pill);
+  background: var(--border-default);
+  position: relative; cursor: pointer; flex: none;
+  transition: background 0.15s;
+}
+.toggle::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--fg-primary); transition: left 0.15s, background 0.15s;
+}
+.toggle[aria-checked="true"] { background: var(--accent); }
+.toggle[aria-checked="true"]::after { left: 14px; background: var(--fg-on-accent); }
+
+/* drop zone */
+.dropzone {
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-7);
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-4);
+  color: var(--fg-secondary);
+  background: var(--bg-input);
+  text-align: center;
+}
+.dropzone strong { color: var(--fg-primary); font-weight: var(--fw-medium); }
+.parser-preview {
+  margin-top: var(--space-5);
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono); font-size: var(--fs-11);
+  max-height: 160px; overflow: auto;
+}
+.parser-preview .pp-row {
+  display: grid; grid-template-columns: 18px 1fr auto;
+  gap: var(--space-4); align-items: center;
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.parser-preview .pp-row:last-child { border-bottom: 0; }
+.parser-preview .pp-row .ok { color: var(--status-online); }
+.parser-preview .pp-row .err { color: var(--status-error); }
+.parser-preview .pp-row .name { color: var(--fg-primary); }
+.parser-preview .pp-row .note { color: var(--fg-tertiary); font-size: var(--fs-11); }
+
+/* =====================================================================
+   CONTEXT MENU
+   ===================================================================== */
+.contextmenu {
+  position: absolute;
+  z-index: 20;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+  padding: var(--space-3);
+  min-width: 220px;
+  font-size: var(--fs-13);
+}
+.cm-item {
+  position: relative;
+  display: grid; grid-template-columns: 16px 1fr auto;
+  gap: var(--space-4); align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  color: var(--fg-primary);
+  cursor: pointer;
+}
+.cm-item:hover, .cm-item[data-hover="true"] { background: var(--accent); color: var(--fg-on-accent); }
+.cm-item .icon { color: var(--fg-secondary); display: inline-flex; }
+.cm-item:hover .icon, .cm-item[data-hover="true"] .icon { color: var(--fg-on-accent); }
+.cm-item.danger { color: var(--status-error); }
+.cm-item.danger:hover { background: var(--status-error); color: white; }
+.cm-shortcut { font-family: var(--font-mono); font-size: var(--fs-11); color: var(--fg-tertiary); }
+.cm-item:hover .cm-shortcut, .cm-item[data-hover="true"] .cm-shortcut { color: color-mix(in oklab, white 70%, transparent); }
+
+/* Discord-style hover tooltip — shows on the right of the menu item */
+.cm-item[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 100%; top: 50%;
+  transform: translate(var(--space-4), -50%);
+  background: #0F0F10; color: #FFFFFF;
+  font-size: var(--fs-11);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  box-shadow: var(--shadow-popover);
+  z-index: 30;
+  pointer-events: none;
+}
+.cm-sep { height: 1px; background: var(--border-default); margin: var(--space-3) 0; }
+
+/* submenu indicator — sits in the 3rd grid cell (replaces shortcut for has-sub items) */
+.cm-chevron {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 10px; height: 10px;
+  color: var(--fg-tertiary);
+}
+.cm-item:hover .cm-chevron, .cm-item[data-hover="true"] .cm-chevron { color: var(--fg-on-accent); }
+
+.submenu {
+  position: absolute;
+  left: 100%; top: -8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+  padding: var(--space-3);
+  min-width: 180px;
+  margin-left: var(--space-3);
+}
+
+/* =====================================================================
+   EMPTY STATE
+   ===================================================================== */
+.empty {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-8);
+}
+.empty-card {
+  width: 460px;
+  padding: var(--space-8);
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-5);
+}
+.empty-card .glyph {
+  width: 56px; height: 56px;
+  border-radius: var(--radius-lg);
+  background: var(--accent-subtle-bg);
+  color: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.empty-card h2 { margin: 0; font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.empty-card p { margin: 0; color: var(--fg-secondary); font-size: var(--fs-13); line-height: var(--lh-normal); max-width: 360px; }
+.empty-card .actions { display: flex; gap: var(--space-3); margin-top: var(--space-4); }
+.kbdhint {
+  font-size: var(--fs-11); color: var(--fg-tertiary);
+  display: inline-flex; gap: var(--space-3); align-items: center;
+}
+.kbdhint .kbd {
+  font-family: var(--font-mono); font-size: var(--fs-11);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px; color: var(--fg-secondary);
+}
+
+/* =====================================================================
+   LOADING STATE — skeleton rows
+   ===================================================================== */
+.skel {
+  background: var(--skeleton);
+  background-size: 200% 100%;
+  border-radius: var(--radius-sm);
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+.skel-row {
+  display: grid; grid-template-columns: 36px 1fr auto;
+  gap: var(--space-5); align-items: center;
+  height: var(--row-h); padding: 0 var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.skel-row .a { width: 36px; height: 36px; border-radius: var(--radius-md); }
+.skel-row .l1 { height: 10px; width: 40%; margin-bottom: 6px; }
+.skel-row .l2 { height: 8px; width: 60%; }
+.skel-row .r  { width: 64px; height: 10px; }
+
+/* =====================================================================
+   SETTINGS layout
+   ===================================================================== */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  height: 520px;
+}
+.settings-nav {
+  border-right: 1px solid var(--border-subtle);
+  padding: var(--space-5);
+  display: flex; flex-direction: column; gap: 1px;
+}
+.settings-nav .item {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  color: var(--fg-secondary);
+  font-size: var(--fs-13);
+  cursor: pointer;
+  display: flex; align-items: center; gap: var(--space-4);
+}
+.settings-nav .item:hover { background: var(--bg-hover); color: var(--fg-primary); }
+.settings-nav .item[aria-selected="true"] { background: var(--bg-selected); color: var(--fg-primary); }
+.settings-pane { padding: var(--space-7); overflow: auto; }
+
+.kbd-row {
+  display: grid; grid-template-columns: 1fr auto;
+  gap: var(--space-5); align-items: center;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fs-13);
+}
+.kbd-row:last-child { border-bottom: 0; }
+.kbd-row .keys { display: inline-flex; gap: var(--space-2); }
+.kbd-row .kbd {
+  font-family: var(--font-mono); font-size: var(--fs-11);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  background: var(--bg-input);
+  color: var(--fg-primary);
+}
+
+/* helpers */
+.hr { height: 1px; background: var(--border-subtle); margin: var(--space-5) 0; }
+.muted { color: var(--fg-secondary); }
+.tert  { color: var(--fg-tertiary); }
+.mono  { font-family: var(--font-mono); }
+.row-flex { display: flex; align-items: center; gap: var(--space-4); }
+.spacer { flex: 1; }
+.danger { color: var(--status-error); }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     PROTOTYPE-ONLY STATE SWITCHER (not part of the app)
+     ============================================================ -->
+<div class="protochrome">
+  <span class="label">State</span>
+  <div class="tabs" role="tablist" id="state-tabs">
+    <button class="tab" role="tab" data-state="normal" aria-selected="true">Normal</button>
+    <button class="tab" role="tab" data-state="selected">Selected · Detail</button>
+    <button class="tab" role="tab" data-state="multi">Multi-select</button>
+    <button class="tab" role="tab" data-state="error">Cookie expired</button>
+    <button class="tab" role="tab" data-state="empty">Empty</button>
+    <button class="tab" role="tab" data-state="loading">Loading</button>
+    <button class="tab" role="tab" data-state="contextmenu">Context menu</button>
+    <button class="tab" role="tab" data-state="add">Add Account</button>
+    <button class="tab" role="tab" data-state="twofa">2FA prompt</button>
+    <button class="tab" role="tab" data-state="launch">Launch dialog</button>
+    <button class="tab" role="tab" data-state="settings">Settings</button>
+    <button class="tab" role="tab" data-state="confirm">Confirm delete</button>
+  </div>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+    <svg id="theme-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <span id="theme-label">Dark</span>
+  </button>
+</div>
+
+<!-- All states share the same shell scaffold; only differences are toggled. -->
+<!-- Shared icon defs -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-min" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-max" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/></symbol>
+    <symbol id="i-folder-move" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><path d="M12 11v6M9 14l3 3 3-3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+    <symbol id="i-bug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="8" height="14" rx="4"/><path d="M8 14H4M16 14h4M8 10H4M16 10h4M12 2v4M9 4l3-2 3 2"/></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M10 14h.01M14 14h.01M18 14h.01M7 18h10"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 0 20 2 2 0 0 0 1.5-3.34A2 2 0 0 1 15 15h2a5 5 0 0 0 5-5c0-4.42-4.48-8-10-8z"/><circle cx="6.5" cy="11.5" r="1"/><circle cx="9.5" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/><circle cx="17.5" cy="11.5" r="1"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-launch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============================================================
+     STATE: Normal — list with 8 mock accounts
+     ============================================================ -->
+<section class="state" data-state="normal" data-active="true">
+  <h3 class="state-title">ShellView · Normal</h3>
+  <div class="window">
+    <!-- title bar -->
+    <header class="titlebar">
+      <div class="brand">
+        <span class="logo"></span>
+        <strong>RAM Fork</strong>
+        <span class="sep">·</span>
+        <span>Account Manager</span>
+      </div>
+      <div class="winctrl">
+        <button aria-label="Minimize"><svg width="14" height="14"><use href="#i-min"/></svg></button>
+        <button aria-label="Maximize"><svg width="12" height="12"><use href="#i-max"/></svg></button>
+        <button class="close" aria-label="Close"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+      </div>
+    </header>
+    <div class="shell">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <span class="heading">Groups</span>
+          <button class="icon-btn" aria-label="Add group" title="New group"><svg width="14" height="14"><use href="#i-plus"/></svg></button>
+        </div>
+        <ul class="group-list">
+          <li class="group-row" aria-selected="true">
+            <span class="gicon"><svg width="14" height="14"><use href="#i-users"/></svg></span>
+            <span class="gname">All accounts</span>
+            <span class="gcount">8</span>
+          </li>
+          <li class="group-row">
+            <span class="gprefix">01</span>
+            <span class="gname">Farming</span>
+            <span class="gcount">4</span>
+          </li>
+          <li class="group-row">
+            <span class="gprefix">02</span>
+            <span class="gname">Trading</span>
+            <span class="gcount">2</span>
+          </li>
+          <li class="group-row">
+            <span class="gicon"><svg width="14" height="14"><use href="#i-folder"/></svg></span>
+            <span class="gname">Other</span>
+            <span class="gcount">2</span>
+          </li>
+        </ul>
+        <div class="sidebar-footer">
+          <span class="me-avatar">YT</span>
+          <div class="me-info">
+            <span class="me-name">Local profile</span>
+            <span class="me-sub">v0.4.2-alpha</span>
+          </div>
+          <button class="icon-btn" aria-label="Settings" title="Settings"><svg width="14" height="14"><use href="#i-settings"/></svg></button>
+        </div>
+      </aside>
+
+      <!-- List pane -->
+      <main class="listpane">
+        <div class="listheader">
+          <div class="searchbox">
+            <svg width="14" height="14"><use href="#i-search"/></svg>
+            <input type="text" placeholder="Search accounts, tags, IDs…" />
+            <span class="kbd">⌘K</span>
+          </div>
+          <button class="btn"><svg width="14" height="14"><use href="#i-refresh"/></svg> Refresh all</button>
+          <button class="btn btn-primary"><svg width="14" height="14"><use href="#i-plus"/></svg> Add account</button>
+        </div>
+        <div class="listmeta">
+          <div class="filters">
+            <span>Showing</span>
+            <span class="pill-filter"><strong>All accounts</strong></span>
+            <span class="tert">·</span>
+            <span><strong class="muted">3</strong> online · <strong class="muted">2</strong> in-game · <strong class="muted">1</strong> error</span>
+          </div>
+          <span class="count">8 of 8</span>
+        </div>
+        <div class="list">
+          <!-- 1: online -->
+          <div class="acct">
+            <div class="avatar placeholder"><span class="initial">A</span><span class="status online"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1">
+                <span class="acct-display">aspen.harvester</span>
+                <span class="acct-username-secondary">@aspen_h_2014</span>
+                <span class="chip chip-group">01 Farming</span>
+              </div>
+              <div class="acct-line2">
+                <span class="acct-status online"><span class="dot online"></span>Online</span>
+                <span class="acct-presence">· Website</span>
+                <span class="acct-tags">
+                  <span class="chip">main</span>
+                  <span class="chip">vip</span>
+                </span>
+              </div>
+            </div>
+            <div class="acct-right">
+              <span class="robux"><span class="rsymbol">R$</span>12,480</span>
+              <div class="acct-actions">
+                <button class="icon-btn" title="Launch"><svg width="14" height="14"><use href="#i-play"/></svg></button>
+                <button class="icon-btn" title="More"><svg width="14" height="14"><use href="#i-more"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <!-- 2: in-game with premium -->
+          <div class="acct">
+            <div class="avatar placeholder">
+              <span class="initial">B</span>
+              <span class="premium-ring"></span>
+            </div>
+            <div class="acct-main">
+              <div class="acct-line1">
+                <span class="acct-alias">bouncer-bot</span>
+                <span class="acct-username-secondary">@birch_collector</span>
+                <span class="chip chip-group">01 Farming</span>
+              </div>
+              <div class="acct-line2">
+                <span class="acct-status ingame"><span class="dot ingame"></span>In Experience</span>
+                <span class="acct-location">· Tower of Hell · server 4f1c</span>
+              </div>
+            </div>
+            <div class="acct-right">
+              <span class="robux"><span class="rsymbol">R$</span>4,219</span>
+              <div class="acct-actions">
+                <button class="icon-btn" title="Launch"><svg width="14" height="14"><use href="#i-play"/></svg></button>
+                <button class="icon-btn" title="More"><svg width="14" height="14"><use href="#i-more"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <!-- 3: in-game -->
+          <div class="acct">
+            <div class="avatar placeholder"><span class="initial">C</span><span class="status ingame"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1">
+                <span class="acct-display">cedar.runner</span>
+                <span class="acct-username-secondary">@cedar_r</span>
+                <span class="chip chip-group">01 Farming</span>
+              </div>
+              <div class="acct-line2">
+                <span class="acct-status ingame"><span class="dot ingame"></span>In Experience</span>
+                <span class="acct-location">· Adopt Me!</span>
+                <span class="acct-tags"><span class="chip">alt</span></span>
+              </div>
+            </div>
+            <div class="acct-right">
+              <span class="robux"><span class="rsymbol">R$</span>980</span>
+              <div class="acct-actions">
+                <button class="icon-btn" title="Launch"><svg width="14" height="14"><use href="#i-play"/></svg></button>
+                <button class="icon-btn" title="More"><svg width="14" height="14"><use href="#i-more"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <!-- 4: studio -->
+          <div class="acct">
+            <div class="avatar placeholder"><span class="initial">D</span><span class="status online"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1">
+                <span class="acct-display">dune.builder</span>
+                <span class="acct-username-secondary">@dune_dev</span>
+                <span class="chip chip-group">02 Trading</span>
+              </div>
+              <div class="acct-line2">
+                <span class="acct-status online"><span class="dot online"></span>Online</span>
+                <span class="acct-presence">· Studio</span>
+                <span class="acct-tags"><span class="chip">dev</span></span>
+              </div>
+            </div>
+            <div class="acct-right">
+              <span class="robux"><span class="rsymbol">R$</span>32,005</span>
+              <div class="acct-actions">
+                <button class="icon-btn" title="Launch"><svg width="14" height="14"><use href="#i-play"/></svg></button>
+                <button class="icon-btn" title="More"><svg width="14" height="14"><use href="#i-more"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <!-- 5: error -->
+          <div class="acct">
+            <div class="avatar placeholder"><span class="initial">E</span><span class="status error"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1">
+                <span class="acct-display">elm.scout</span>
+                <span class="acct-username-secondary">@elm_s_99</span>
+                <span class="chip chip-group">01 Farming</span>
+              </div>
+              <div class="acct-line2">
+                <span class="acct-status error"><span class="dot error"></span>Auth error</span>
+                <span class="acct-presence">· Cookie expired 3h ago</span>
+              </div>
+            </div>
+            <div class="acct-right">
+              <span class="robux tert"><span class="rsymbol">R$</span>—</span>
+              <div class="acct-actions">
+                <button class="btn btn-sm">Re-auth</button>
+                <button class="icon-btn" title="More"><svg width="14" height="14"><use href="#i-more"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <!-- 6: offline -->
+          <div class="acct">
+            <div class="avatar placeholder"><span class="initial">F</span><span class="status offline"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1">
+                <span class="acct-display">fern.trader</span>
+                <span class="acct-username-secondary">@fern_t</span>
+                <span class="chip chip-group">02 Trading</span>
+              </div>
+              <div class="acct-line2">
+                <span class="acct-status offline"><span class="dot offline"></span>Offline</span>
+                <span class="acct-presence">· Last seen 2 days ago</span>
+              </div>
+            </div>
+            <div class="acct-right">
+              <span class="robux"><span class="rsymbol">R$</span>521</span>
+              <div class="acct-actions">
+                <button class="icon-btn" title="Launch"><svg width="14" height="14"><use href="#i-play"/></svg></button>
+                <button class="icon-btn" title="More"><svg width="14" height="14"><use href="#i-more"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <!-- 7: online -->
+          <div class="acct">
+            <div class="avatar placeholder"><span class="initial">G</span><span class="status online"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1">
+                <span class="acct-display">grove.keeper</span>
+                <span class="acct-username-secondary">@grove_k</span>
+                <span class="chip chip-group">Other</span>
+              </div>
+              <div class="acct-line2">
+                <span class="acct-status online"><span class="dot online"></span>Online</span>
+                <span class="acct-presence">· Website</span>
+              </div>
+            </div>
+            <div class="acct-right">
+              <span class="robux"><span class="rsymbol">R$</span>3,210</span>
+              <div class="acct-actions">
+                <button class="icon-btn" title="Launch"><svg width="14" height="14"><use href="#i-play"/></svg></button>
+                <button class="icon-btn" title="More"><svg width="14" height="14"><use href="#i-more"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <!-- 8: disabled -->
+          <div class="acct" data-disabled="true">
+            <div class="avatar placeholder"><span class="initial">H</span><span class="status offline"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1">
+                <span class="acct-display">hazel.archive</span>
+                <span class="acct-username-secondary">@hazel_arc</span>
+                <span class="chip chip-group">Other</span>
+              </div>
+              <div class="acct-line2">
+                <span class="acct-status offline"><span class="dot offline"></span>Disabled</span>
+                <span class="acct-presence">· Banned manually</span>
+              </div>
+            </div>
+            <div class="acct-right">
+              <span class="robux tert"><span class="rsymbol">R$</span>—</span>
+              <div class="acct-actions">
+                <button class="icon-btn" title="More"><svg width="14" height="14"><use href="#i-more"/></svg></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATE: Selected — detail panel open on bouncer-bot
+     ============================================================ -->
+<section class="state" data-state="selected">
+  <h3 class="state-title">ShellView · Account selected · Detail panel open</h3>
+  <div class="window">
+    <header class="titlebar">
+      <div class="brand"><span class="logo"></span><strong>RAM Fork</strong><span class="sep">·</span><span>Account Manager</span></div>
+      <div class="winctrl">
+        <button><svg width="14" height="14"><use href="#i-min"/></svg></button>
+        <button><svg width="12" height="12"><use href="#i-max"/></svg></button>
+        <button class="close"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+      </div>
+    </header>
+    <div class="shell with-detail">
+      <!-- sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <span class="heading">Groups</span>
+          <button class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></button>
+        </div>
+        <ul class="group-list">
+          <li class="group-row"><span class="gicon"><svg width="14" height="14"><use href="#i-users"/></svg></span><span class="gname">All accounts</span><span class="gcount">8</span></li>
+          <li class="group-row" aria-selected="true"><span class="gprefix">01</span><span class="gname">Farming</span><span class="gcount">4</span></li>
+          <li class="group-row"><span class="gprefix">02</span><span class="gname">Trading</span><span class="gcount">2</span></li>
+          <li class="group-row"><span class="gicon"><svg width="14" height="14"><use href="#i-folder"/></svg></span><span class="gname">Other</span><span class="gcount">2</span></li>
+        </ul>
+        <div class="sidebar-footer">
+          <span class="me-avatar">YT</span>
+          <div class="me-info"><span class="me-name">Local profile</span><span class="me-sub">v0.4.2-alpha</span></div>
+          <button class="icon-btn" title="Settings"><svg width="14" height="14"><use href="#i-settings"/></svg></button>
+        </div>
+      </aside>
+
+      <!-- list -->
+      <main class="listpane">
+        <div class="listheader">
+          <div class="searchbox"><svg width="14" height="14"><use href="#i-search"/></svg><input placeholder="Search accounts…" /><span class="kbd">⌘K</span></div>
+          <button class="btn"><svg width="14" height="14"><use href="#i-refresh"/></svg> Refresh</button>
+        </div>
+        <div class="listmeta">
+          <div class="filters">
+            <span class="pill-filter"><strong>01 Farming</strong></span>
+            <span class="tert">·</span>
+            <span><strong class="muted">2</strong> online · <strong class="muted">1</strong> in-game · <strong class="muted">1</strong> error</span>
+          </div>
+          <span class="count">4 of 8</span>
+        </div>
+        <div class="list">
+          <div class="acct">
+            <div class="avatar placeholder"><span class="initial">A</span><span class="status online"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1"><span class="acct-display">aspen.harvester</span><span class="acct-username-secondary">@aspen_h_2014</span></div>
+              <div class="acct-line2"><span class="acct-status online"><span class="dot online"></span>Online</span><span class="acct-presence">· Website</span></div>
+            </div>
+            <div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>12,480</span></div>
+          </div>
+          <div class="acct" aria-selected="true">
+            <div class="avatar placeholder"><span class="initial">B</span><span class="status ingame"></span><span class="premium-ring"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1"><span class="acct-alias">bouncer-bot</span><span class="acct-username-secondary">@birch_collector</span></div>
+              <div class="acct-line2"><span class="acct-status ingame"><span class="dot ingame"></span>In Experience</span><span class="acct-location">· Tower of Hell · 4f1c</span></div>
+            </div>
+            <div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>4,219</span></div>
+          </div>
+          <div class="acct">
+            <div class="avatar placeholder"><span class="initial">C</span><span class="status ingame"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1"><span class="acct-display">cedar.runner</span><span class="acct-username-secondary">@cedar_r</span></div>
+              <div class="acct-line2"><span class="acct-status ingame"><span class="dot ingame"></span>In Experience</span><span class="acct-location">· Adopt Me!</span></div>
+            </div>
+            <div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>980</span></div>
+          </div>
+          <div class="acct">
+            <div class="avatar placeholder"><span class="initial">E</span><span class="status error"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1"><span class="acct-display">elm.scout</span><span class="acct-username-secondary">@elm_s_99</span></div>
+              <div class="acct-line2"><span class="acct-status error"><span class="dot error"></span>Auth error</span></div>
+            </div>
+            <div class="acct-right"><span class="robux tert"><span class="rsymbol">R$</span>—</span></div>
+          </div>
+        </div>
+      </main>
+
+      <!-- DETAIL -->
+      <aside class="detail" aria-label="Account detail">
+        <div class="detail-header">
+          <div class="row">
+            <div class="avatar placeholder size-lg"><span class="initial">B</span><span class="status ingame"></span><span class="premium-ring"></span></div>
+            <div class="detail-name">
+              <span class="alias">bouncer-bot</span>
+              <span class="username">@birch_collector · 481993772</span>
+            </div>
+            <div class="right">
+              <button class="icon-btn" title="Close"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+            </div>
+          </div>
+          <div class="detail-status-row">
+            <span class="acct-status ingame"><span class="dot ingame"></span>In Experience</span>
+            <span class="tert">· Tower of Hell · server 4f1c</span>
+            <span class="spacer"></span>
+            <span class="robux"><span class="rsymbol">R$</span>4,219</span>
+          </div>
+        </div>
+        <div class="detail-actions">
+          <button class="btn btn-primary"><svg width="14" height="14"><use href="#i-play"/></svg>Launch</button>
+          <button class="btn"><svg width="14" height="14"><use href="#i-copy"/></svg>Cookie</button>
+          <button class="btn"><svg width="14" height="14"><use href="#i-refresh"/></svg>Refresh</button>
+          <button class="btn btn-ghost" title="More"><svg width="14" height="14"><use href="#i-more"/></svg></button>
+        </div>
+        <div class="detail-body">
+          <!-- editable -->
+          <div class="field-section">
+            <h4>General <span class="kbdhint"><span class="dot" style="background:var(--accent);width:6px;height:6px"></span> 2 unsaved</span></h4>
+            <div class="field">
+              <label>Alias <span class="dirty"></span></label>
+              <input class="input" value="bouncer-bot" />
+            </div>
+            <div class="field">
+              <label>Description</label>
+              <textarea class="textarea" rows="2">Auto-farms tokens in Tower of Hell. Restart every 6h.</textarea>
+            </div>
+            <div class="field">
+              <label>Group <span class="dirty"></span></label>
+              <select class="select">
+                <option>01 Farming</option>
+                <option>02 Trading</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Tags</label>
+              <div class="chip-editor">
+                <span class="chip chip-removable">main <button>×</button></span>
+                <span class="chip chip-removable">vip <button>×</button></span>
+                <span class="chip chip-removable">farm <button>×</button></span>
+                <input placeholder="Add tag…" />
+              </div>
+            </div>
+          </div>
+
+          <div class="field-section">
+            <h4>Custom fields <button class="icon-btn"><svg width="12" height="12"><use href="#i-plus"/></svg></button></h4>
+            <div class="kv-list">
+              <div class="kv-row">
+                <input class="input mono" value="discord_id" />
+                <input class="input mono" value="184772009..." />
+                <button class="icon-btn"><svg width="12" height="12"><use href="#i-x"/></svg></button>
+              </div>
+              <div class="kv-row">
+                <input class="input mono" value="recovery_email" />
+                <input class="input mono" value="b****@proton.me" />
+                <button class="icon-btn"><svg width="12" height="12"><use href="#i-x"/></svg></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-section">
+            <h4>Proxy</h4>
+            <div class="field-row">
+              <div class="field"><label>Host</label><input class="input mono" placeholder="—" value="us-east-04.prx.local" /></div>
+              <div class="field"><label>Port</label><input class="input mono" value="51820" /></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Username</label><input class="input mono" placeholder="—" /></div>
+              <div class="field"><label>Password</label><input class="input mono" type="password" value="••••••••" /></div>
+            </div>
+          </div>
+
+          <div class="field-section">
+            <h4>Window placement <span class="tert" style="text-transform:none;letter-spacing:0;font-weight:400">override</span></h4>
+            <div class="field-row cols-4">
+              <div class="field"><label>X</label><input class="input mono" value="0" /></div>
+              <div class="field"><label>Y</label><input class="input mono" value="0" /></div>
+              <div class="field"><label>W</label><input class="input mono" value="960" /></div>
+              <div class="field"><label>H</label><input class="input mono" value="540" /></div>
+            </div>
+          </div>
+
+          <div class="field-section">
+            <h4>Info</h4>
+            <dl class="info-grid">
+              <dt>UserId</dt><dd class="mono">481993772</dd>
+              <dt>Username</dt><dd class="mono">birch_collector</dd>
+              <dt>Created</dt><dd>Mar 14, 2019</dd>
+              <dt>Last login</dt><dd>2m ago</dd>
+              <dt>Cookie age</dt><dd>14d 3h</dd>
+            </dl>
+          </div>
+
+          <div class="field-section">
+            <h4>Recent experiences</h4>
+            <div class="recent-games">
+              <div class="recent-game"><span class="thumb"></span><span class="name">Tower of Hell</span><span class="meta">2m</span></div>
+              <div class="recent-game"><span class="thumb"></span><span class="name">Adopt Me!</span><span class="meta">1h</span></div>
+              <div class="recent-game"><span class="thumb"></span><span class="name">Bedwars</span><span class="meta">yesterday</span></div>
+              <div class="recent-game"><span class="thumb"></span><span class="name">Blox Fruits</span><span class="meta">3d</span></div>
+            </div>
+          </div>
+
+          <!-- save bar -->
+          <div class="field-section" style="display:flex;gap:var(--space-3);justify-content:flex-end;align-items:center">
+            <span class="tert" style="margin-right:auto;font-size:var(--fs-12)">2 unsaved changes</span>
+            <button class="btn">Cancel</button>
+            <button class="btn btn-primary"><svg width="14" height="14"><use href="#i-check"/></svg>Apply</button>
+          </div>
+
+          <div class="field-section">
+            <button class="btn btn-ghost danger" style="width:100%;justify-content:center;color:var(--status-error)">
+              <svg width="14" height="14"><use href="#i-trash"/></svg> Delete account
+            </button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATE: Multi-select — bulk toolbar visible
+     ============================================================ -->
+<section class="state" data-state="multi">
+  <h3 class="state-title">ShellView · Multi-select (3 selected)</h3>
+  <div class="window">
+    <header class="titlebar">
+      <div class="brand"><span class="logo"></span><strong>RAM Fork</strong><span class="sep">·</span><span>Account Manager</span></div>
+      <div class="winctrl">
+        <button><svg width="14" height="14"><use href="#i-min"/></svg></button>
+        <button><svg width="12" height="12"><use href="#i-max"/></svg></button>
+        <button class="close"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+      </div>
+    </header>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="sidebar-section"><span class="heading">Groups</span>
+          <button class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></button>
+        </div>
+        <ul class="group-list">
+          <li class="group-row" aria-selected="true"><span class="gicon"><svg width="14" height="14"><use href="#i-users"/></svg></span><span class="gname">All accounts</span><span class="gcount">8</span></li>
+          <li class="group-row"><span class="gprefix">01</span><span class="gname">Farming</span><span class="gcount">4</span></li>
+          <li class="group-row"><span class="gprefix">02</span><span class="gname">Trading</span><span class="gcount">2</span></li>
+          <li class="group-row"><span class="gicon"><svg width="14" height="14"><use href="#i-folder"/></svg></span><span class="gname">Other</span><span class="gcount">2</span></li>
+        </ul>
+        <div class="sidebar-footer">
+          <span class="me-avatar">YT</span>
+          <div class="me-info"><span class="me-name">Local profile</span><span class="me-sub">v0.4.2-alpha</span></div>
+          <button class="icon-btn" title="Settings"><svg width="14" height="14"><use href="#i-settings"/></svg></button>
+        </div>
+      </aside>
+      <main class="listpane">
+        <div class="bulkbar">
+          <span class="count">3 selected</span>
+          <span class="muted" style="font-size:var(--fs-12)">across <strong style="color:var(--fg-primary)">2 groups</strong></span>
+          <div class="actions">
+            <button class="btn btn-sm btn-primary"><svg width="12" height="12"><use href="#i-play"/></svg>Launch all</button>
+            <button class="btn btn-sm"><svg width="12" height="12"><use href="#i-refresh"/></svg>Refresh</button>
+            <button class="btn btn-sm"><svg width="12" height="12"><use href="#i-folder-move"/></svg>Move…</button>
+            <button class="btn btn-sm"><svg width="12" height="12"><use href="#i-tag"/></svg>Add tag</button>
+            <button class="btn btn-sm" style="color:var(--status-error)"><svg width="12" height="12"><use href="#i-trash"/></svg>Delete</button>
+            <button class="btn btn-sm btn-ghost">Clear</button>
+          </div>
+        </div>
+        <div class="list">
+          <!-- selected rows show check -->
+          <div class="acct" aria-selected="true" style="grid-template-columns: 16px 36px 1fr auto; gap: var(--space-5);">
+            <span class="acct-multicheck" data-checked="true"><svg width="10" height="10"><use href="#i-check"/></svg></span>
+            <div class="avatar placeholder"><span class="initial">A</span><span class="status online"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1"><span class="acct-display">aspen.harvester</span><span class="acct-username-secondary">@aspen_h_2014</span><span class="chip chip-group">01 Farming</span></div>
+              <div class="acct-line2"><span class="acct-status online"><span class="dot online"></span>Online</span><span class="acct-presence">· Website</span></div>
+            </div>
+            <div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>12,480</span></div>
+          </div>
+          <div class="acct" aria-selected="true" style="grid-template-columns: 16px 36px 1fr auto; gap: var(--space-5);">
+            <span class="acct-multicheck" data-checked="true"><svg width="10" height="10"><use href="#i-check"/></svg></span>
+            <div class="avatar placeholder"><span class="initial">B</span><span class="status ingame"></span><span class="premium-ring"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1"><span class="acct-alias">bouncer-bot</span><span class="acct-username-secondary">@birch_collector</span><span class="chip chip-group">01 Farming</span></div>
+              <div class="acct-line2"><span class="acct-status ingame"><span class="dot ingame"></span>In Experience</span><span class="acct-location">· Tower of Hell</span></div>
+            </div>
+            <div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>4,219</span></div>
+          </div>
+          <div class="acct" style="grid-template-columns: 16px 36px 1fr auto; gap: var(--space-5);">
+            <span class="acct-multicheck"></span>
+            <div class="avatar placeholder"><span class="initial">C</span><span class="status ingame"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1"><span class="acct-display">cedar.runner</span><span class="acct-username-secondary">@cedar_r</span><span class="chip chip-group">01 Farming</span></div>
+              <div class="acct-line2"><span class="acct-status ingame"><span class="dot ingame"></span>In Experience</span><span class="acct-location">· Adopt Me!</span></div>
+            </div>
+            <div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>980</span></div>
+          </div>
+          <div class="acct" style="grid-template-columns: 16px 36px 1fr auto; gap: var(--space-5);">
+            <span class="acct-multicheck"></span>
+            <div class="avatar placeholder"><span class="initial">D</span><span class="status online"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1"><span class="acct-display">dune.builder</span><span class="acct-username-secondary">@dune_dev</span><span class="chip chip-group">02 Trading</span></div>
+              <div class="acct-line2"><span class="acct-status online"><span class="dot online"></span>Online</span><span class="acct-presence">· Studio</span></div>
+            </div>
+            <div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>32,005</span></div>
+          </div>
+          <div class="acct" style="grid-template-columns: 16px 36px 1fr auto; gap: var(--space-5);">
+            <span class="acct-multicheck"></span>
+            <div class="avatar placeholder"><span class="initial">E</span><span class="status error"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1"><span class="acct-display">elm.scout</span><span class="acct-username-secondary">@elm_s_99</span><span class="chip chip-group">01 Farming</span></div>
+              <div class="acct-line2"><span class="acct-status error"><span class="dot error"></span>Auth error</span></div>
+            </div>
+            <div class="acct-right"><span class="robux tert"><span class="rsymbol">R$</span>—</span></div>
+          </div>
+          <div class="acct" aria-selected="true" style="grid-template-columns: 16px 36px 1fr auto; gap: var(--space-5);">
+            <span class="acct-multicheck" data-checked="true"><svg width="10" height="10"><use href="#i-check"/></svg></span>
+            <div class="avatar placeholder"><span class="initial">F</span><span class="status offline"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1"><span class="acct-display">fern.trader</span><span class="acct-username-secondary">@fern_t</span><span class="chip chip-group">02 Trading</span></div>
+              <div class="acct-line2"><span class="acct-status offline"><span class="dot offline"></span>Offline</span><span class="acct-presence">· 2 days ago</span></div>
+            </div>
+            <div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>521</span></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATE: Cookie expired — error banner inline on row
+     ============================================================ -->
+<section class="state" data-state="error">
+  <h3 class="state-title">ShellView · Cookie-expired error banner</h3>
+  <div class="window">
+    <header class="titlebar">
+      <div class="brand"><span class="logo"></span><strong>RAM Fork</strong><span class="sep">·</span><span>Account Manager</span></div>
+      <div class="winctrl">
+        <button><svg width="14" height="14"><use href="#i-min"/></svg></button>
+        <button><svg width="12" height="12"><use href="#i-max"/></svg></button>
+        <button class="close"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+      </div>
+    </header>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="sidebar-section"><span class="heading">Groups</span>
+          <button class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></button></div>
+        <ul class="group-list">
+          <li class="group-row" aria-selected="true"><span class="gicon"><svg width="14" height="14"><use href="#i-users"/></svg></span><span class="gname">All accounts</span><span class="gcount">8</span></li>
+          <li class="group-row"><span class="gprefix">01</span><span class="gname">Farming</span><span class="gcount">4</span></li>
+          <li class="group-row"><span class="gprefix">02</span><span class="gname">Trading</span><span class="gcount">2</span></li>
+          <li class="group-row"><span class="gicon"><svg width="14" height="14"><use href="#i-folder"/></svg></span><span class="gname">Other</span><span class="gcount">2</span></li>
+        </ul>
+        <div class="sidebar-footer"><span class="me-avatar">YT</span><div class="me-info"><span class="me-name">Local profile</span><span class="me-sub">v0.4.2-alpha</span></div><button class="icon-btn" title="Settings"><svg width="14" height="14"><use href="#i-settings"/></svg></button></div>
+      </aside>
+      <main class="listpane">
+        <div class="listheader">
+          <div class="searchbox"><svg width="14" height="14"><use href="#i-search"/></svg><input placeholder="Search accounts…" /><span class="kbd">⌘K</span></div>
+          <button class="btn"><svg width="14" height="14"><use href="#i-refresh"/></svg> Refresh</button>
+        </div>
+        <div class="listmeta"><div class="filters"><span class="pill-filter"><strong>All accounts</strong></span><span class="tert">·</span><span><strong style="color:var(--status-error)">1</strong> needs re-auth</span></div><span class="count">8 of 8</span></div>
+        <div class="list">
+          <!-- account with expanded error banner -->
+          <div class="acct has-banner">
+            <div class="avatar placeholder"><span class="initial">E</span><span class="status error"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1"><span class="acct-display">elm.scout</span><span class="acct-username-secondary">@elm_s_99</span><span class="chip chip-group">01 Farming</span></div>
+              <div class="acct-line2"><span class="acct-status error"><span class="dot error"></span>Auth error</span><span class="acct-presence">· Cookie expired 3h ago</span></div>
+            </div>
+            <div class="acct-right"><span class="robux tert"><span class="rsymbol">R$</span>—</span></div>
+            <div class="row-banner">
+              <span class="icon"><svg width="14" height="14"><use href="#i-alert"/></svg></span>
+              <span class="msg"><strong>.ROBLOSECURITY cookie has expired.</strong> Re-authenticate to resume presence and launch.</span>
+              <button class="btn btn-sm">Paste cookie</button>
+              <button class="btn btn-sm btn-primary">Re-auth with password</button>
+            </div>
+          </div>
+          <div class="acct">
+            <div class="avatar placeholder"><span class="initial">A</span><span class="status online"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1"><span class="acct-display">aspen.harvester</span><span class="acct-username-secondary">@aspen_h_2014</span></div>
+              <div class="acct-line2"><span class="acct-status online"><span class="dot online"></span>Online</span><span class="acct-presence">· Website</span></div>
+            </div>
+            <div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>12,480</span></div>
+          </div>
+          <div class="acct">
+            <div class="avatar placeholder"><span class="initial">B</span><span class="status ingame"></span><span class="premium-ring"></span></div>
+            <div class="acct-main">
+              <div class="acct-line1"><span class="acct-alias">bouncer-bot</span><span class="acct-username-secondary">@birch_collector</span></div>
+              <div class="acct-line2"><span class="acct-status ingame"><span class="dot ingame"></span>In Experience</span><span class="acct-location">· Tower of Hell</span></div>
+            </div>
+            <div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>4,219</span></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATE: Empty — no accounts yet
+     ============================================================ -->
+<section class="state" data-state="empty">
+  <h3 class="state-title">ShellView · Empty (onboarding)</h3>
+  <div class="window">
+    <header class="titlebar">
+      <div class="brand"><span class="logo"></span><strong>RAM Fork</strong><span class="sep">·</span><span>Account Manager</span></div>
+      <div class="winctrl">
+        <button><svg width="14" height="14"><use href="#i-min"/></svg></button>
+        <button><svg width="12" height="12"><use href="#i-max"/></svg></button>
+        <button class="close"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+      </div>
+    </header>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="sidebar-section"><span class="heading">Groups</span><button class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></button></div>
+        <ul class="group-list">
+          <li class="group-row" aria-selected="true"><span class="gicon"><svg width="14" height="14"><use href="#i-users"/></svg></span><span class="gname">All accounts</span><span class="gcount">0</span></li>
+        </ul>
+        <div class="sidebar-footer"><span class="me-avatar">YT</span><div class="me-info"><span class="me-name">Local profile</span><span class="me-sub">v0.4.2-alpha</span></div><button class="icon-btn" title="Settings"><svg width="14" height="14"><use href="#i-settings"/></svg></button></div>
+      </aside>
+      <main class="listpane">
+        <div class="listheader">
+          <div class="searchbox"><svg width="14" height="14"><use href="#i-search"/></svg><input placeholder="Search accounts…" disabled /><span class="kbd">⌘K</span></div>
+        </div>
+        <div class="empty">
+          <div class="empty-card">
+            <span class="glyph"><svg width="28" height="28"><use href="#i-users"/></svg></span>
+            <h2>Add your first account</h2>
+            <p>Paste a <span class="mono">.ROBLOSECURITY</span> cookie, sign in with username and password, or bulk-import from a list.</p>
+            <div class="actions">
+              <button class="btn btn-primary"><svg width="14" height="14"><use href="#i-plus"/></svg> Add account</button>
+              <button class="btn">Bulk import…</button>
+            </div>
+            <span class="kbdhint">or press <span class="kbd">⌘N</span> to add</span>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATE: Loading — skeleton rows
+     ============================================================ -->
+<section class="state" data-state="loading">
+  <h3 class="state-title">ShellView · Loading (IsLoading = true)</h3>
+  <div class="window">
+    <header class="titlebar">
+      <div class="brand"><span class="logo"></span><strong>RAM Fork</strong><span class="sep">·</span><span>Account Manager</span></div>
+      <div class="winctrl">
+        <button><svg width="14" height="14"><use href="#i-min"/></svg></button>
+        <button><svg width="12" height="12"><use href="#i-max"/></svg></button>
+        <button class="close"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+      </div>
+    </header>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="sidebar-section"><span class="heading">Groups</span><button class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></button></div>
+        <ul class="group-list">
+          <li class="group-row" aria-selected="true"><span class="gicon"><svg width="14" height="14"><use href="#i-users"/></svg></span><span class="gname">All accounts</span><span class="skel" style="width:18px;height:10px;border-radius:5px"></span></li>
+          <li class="group-row"><span class="gprefix">··</span><span class="skel" style="width:60%;height:8px;flex:1"></span></li>
+          <li class="group-row"><span class="gprefix">··</span><span class="skel" style="width:40%;height:8px;flex:1"></span></li>
+        </ul>
+        <div class="sidebar-footer"><span class="me-avatar">YT</span><div class="me-info"><span class="me-name">Local profile</span><span class="me-sub">v0.4.2-alpha</span></div><button class="icon-btn" title="Settings"><svg width="14" height="14"><use href="#i-settings"/></svg></button></div>
+      </aside>
+      <main class="listpane">
+        <div class="listheader">
+          <div class="searchbox"><svg width="14" height="14"><use href="#i-search"/></svg><input placeholder="Search accounts…" /><span class="kbd">⌘K</span></div>
+          <button class="btn" disabled><svg width="14" height="14"><use href="#i-refresh"/></svg> Refresh</button>
+        </div>
+        <div class="listmeta"><span class="muted">Loading accounts…</span><span class="count">— of —</span></div>
+        <div class="list">
+          <div class="skel-row"><span class="skel a"></span><div style="flex:1"><div class="skel l1" style="width:32%"></div><div class="skel l2" style="width:55%"></div></div><span class="skel r"></span></div>
+          <div class="skel-row"><span class="skel a"></span><div style="flex:1"><div class="skel l1" style="width:46%"></div><div class="skel l2" style="width:38%"></div></div><span class="skel r"></span></div>
+          <div class="skel-row"><span class="skel a"></span><div style="flex:1"><div class="skel l1" style="width:28%"></div><div class="skel l2" style="width:62%"></div></div><span class="skel r"></span></div>
+          <div class="skel-row"><span class="skel a"></span><div style="flex:1"><div class="skel l1" style="width:36%"></div><div class="skel l2" style="width:44%"></div></div><span class="skel r"></span></div>
+          <div class="skel-row"><span class="skel a"></span><div style="flex:1"><div class="skel l1" style="width:42%"></div><div class="skel l2" style="width:50%"></div></div><span class="skel r"></span></div>
+          <div class="skel-row"><span class="skel a"></span><div style="flex:1"><div class="skel l1" style="width:30%"></div><div class="skel l2" style="width:48%"></div></div><span class="skel r"></span></div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATE: Context menu — right-click
+     ============================================================ -->
+<section class="state" data-state="contextmenu">
+  <h3 class="state-title">ShellView · Right-click context menu (with submenu)</h3>
+  <div class="window">
+    <header class="titlebar">
+      <div class="brand"><span class="logo"></span><strong>RAM Fork</strong><span class="sep">·</span><span>Account Manager</span></div>
+      <div class="winctrl">
+        <button><svg width="14" height="14"><use href="#i-min"/></svg></button>
+        <button><svg width="12" height="12"><use href="#i-max"/></svg></button>
+        <button class="close"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+      </div>
+    </header>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="sidebar-section"><span class="heading">Groups</span><button class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></button></div>
+        <ul class="group-list">
+          <li class="group-row" aria-selected="true"><span class="gicon"><svg width="14" height="14"><use href="#i-users"/></svg></span><span class="gname">All accounts</span><span class="gcount">8</span></li>
+          <li class="group-row"><span class="gprefix">01</span><span class="gname">Farming</span><span class="gcount">4</span></li>
+          <li class="group-row"><span class="gprefix">02</span><span class="gname">Trading</span><span class="gcount">2</span></li>
+          <li class="group-row"><span class="gicon"><svg width="14" height="14"><use href="#i-folder"/></svg></span><span class="gname">Other</span><span class="gcount">2</span></li>
+        </ul>
+        <div class="sidebar-footer"><span class="me-avatar">YT</span><div class="me-info"><span class="me-name">Local profile</span><span class="me-sub">v0.4.2-alpha</span></div><button class="icon-btn" title="Settings"><svg width="14" height="14"><use href="#i-settings"/></svg></button></div>
+      </aside>
+      <main class="listpane">
+        <div class="listheader">
+          <div class="searchbox"><svg width="14" height="14"><use href="#i-search"/></svg><input placeholder="Search accounts…" /><span class="kbd">⌘K</span></div>
+          <button class="btn"><svg width="14" height="14"><use href="#i-refresh"/></svg> Refresh</button>
+        </div>
+        <div class="listmeta"><div class="filters"><span class="pill-filter"><strong>All accounts</strong></span></div><span class="count">8 of 8</span></div>
+        <div class="list" style="position:relative">
+          <div class="acct"><div class="avatar placeholder"><span class="initial">A</span><span class="status online"></span></div><div class="acct-main"><div class="acct-line1"><span class="acct-display">aspen.harvester</span></div><div class="acct-line2"><span class="acct-status online"><span class="dot online"></span>Online</span></div></div><div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>12,480</span></div></div>
+          <div class="acct" aria-selected="true">
+            <div class="avatar placeholder"><span class="initial">B</span><span class="status ingame"></span><span class="premium-ring"></span></div>
+            <div class="acct-main"><div class="acct-line1"><span class="acct-alias">bouncer-bot</span><span class="acct-username-secondary">@birch_collector</span></div><div class="acct-line2"><span class="acct-status ingame"><span class="dot ingame"></span>In Experience</span><span class="acct-location">· Tower of Hell</span></div></div>
+            <div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>4,219</span></div>
+
+            <!-- context menu anchored to row -->
+            <div class="contextmenu" style="left:240px; top:46px">
+              <div class="cm-item has-sub" data-hover="true">
+                <span class="icon"><svg width="14" height="14"><use href="#i-play"/></svg></span>
+                <span>Launch</span>
+                <span class="cm-chevron"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M4 2l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <!-- submenu -->
+                <div class="submenu">
+                  <div class="cm-item"><span class="icon"></span><span>Place ID…</span><span class="cm-shortcut">⏎</span></div>
+                  <div class="cm-item"><span class="icon"></span><span>Job ID…</span><span></span></div>
+                  <div class="cm-item"><span class="icon"></span><span>Follow user…</span><span></span></div>
+                  <div class="cm-item"><span class="icon"></span><span>Private server…</span><span></span></div>
+                  <div class="cm-sep"></div>
+                  <div class="cm-item"><span class="icon"></span><span>Re-launch last</span><span class="cm-shortcut">⌘L</span></div>
+                </div>
+              </div>
+              <div class="cm-item" data-tip="Copies .ROBLOSECURITY to clipboard"><span class="icon"><svg width="14" height="14"><use href="#i-copy"/></svg></span><span>Copy cookie</span><span class="cm-shortcut">⌘⇧C</span></div>
+              <div class="cm-item" data-tip="481993772"><span class="icon"><svg width="14" height="14"><use href="#i-copy"/></svg></span><span>Copy User ID</span><span></span></div>
+              <div class="cm-item" data-tip="Re-fetch presence, robux, thumbnail"><span class="icon"><svg width="14" height="14"><use href="#i-refresh"/></svg></span><span>Refresh</span><span class="cm-shortcut">⌘R</span></div>
+              <div class="cm-sep"></div>
+              <div class="cm-item"><span class="icon"><svg width="14" height="14"><use href="#i-edit"/></svg></span><span>Edit…</span><span class="cm-shortcut">⏎</span></div>
+              <div class="cm-item has-sub"><span class="icon"><svg width="14" height="14"><use href="#i-folder-move"/></svg></span><span>Move to group</span><span class="cm-chevron"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M4 2l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+              <div class="cm-item has-sub"><span class="icon"><svg width="14" height="14"><use href="#i-tag"/></svg></span><span>Add tag</span><span class="cm-chevron"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M4 2l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+              <div class="cm-sep"></div>
+              <div class="cm-item danger"><span class="icon"><svg width="14" height="14"><use href="#i-trash"/></svg></span><span>Delete</span><span class="cm-shortcut">⌫</span></div>
+            </div>
+          </div>
+          <div class="acct"><div class="avatar placeholder"><span class="initial">C</span><span class="status ingame"></span></div><div class="acct-main"><div class="acct-line1"><span class="acct-display">cedar.runner</span></div><div class="acct-line2"><span class="acct-status ingame"><span class="dot ingame"></span>In Experience</span><span class="acct-location">· Adopt Me!</span></div></div><div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>980</span></div></div>
+          <div class="acct"><div class="avatar placeholder"><span class="initial">D</span><span class="status online"></span></div><div class="acct-main"><div class="acct-line1"><span class="acct-display">dune.builder</span></div><div class="acct-line2"><span class="acct-status online"><span class="dot online"></span>Online</span><span class="acct-presence">· Studio</span></div></div><div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>32,005</span></div></div>
+          <div class="acct"><div class="avatar placeholder"><span class="initial">E</span><span class="status error"></span></div><div class="acct-main"><div class="acct-line1"><span class="acct-display">elm.scout</span></div><div class="acct-line2"><span class="acct-status error"><span class="dot error"></span>Auth error</span></div></div><div class="acct-right"><span class="robux tert"><span class="rsymbol">R$</span>—</span></div></div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATE: Add Account dialog
+     ============================================================ -->
+<section class="state" data-state="add">
+  <h3 class="state-title">Dialog · Add Account</h3>
+  <div class="window">
+    <header class="titlebar">
+      <div class="brand"><span class="logo"></span><strong>RAM Fork</strong></div>
+      <div class="winctrl"><button><svg width="14" height="14"><use href="#i-min"/></svg></button><button><svg width="12" height="12"><use href="#i-max"/></svg></button><button class="close"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>
+    </header>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="sidebar-section"><span class="heading">Groups</span><button class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></button></div>
+        <ul class="group-list">
+          <li class="group-row" aria-selected="true"><span class="gicon"><svg width="14" height="14"><use href="#i-users"/></svg></span><span class="gname">All accounts</span><span class="gcount">8</span></li>
+          <li class="group-row"><span class="gprefix">01</span><span class="gname">Farming</span><span class="gcount">4</span></li>
+          <li class="group-row"><span class="gprefix">02</span><span class="gname">Trading</span><span class="gcount">2</span></li>
+          <li class="group-row"><span class="gicon"><svg width="14" height="14"><use href="#i-folder"/></svg></span><span class="gname">Other</span><span class="gcount">2</span></li>
+        </ul>
+        <div class="sidebar-footer"><span class="me-avatar">YT</span><div class="me-info"><span class="me-name">Local profile</span><span class="me-sub">v0.4.2-alpha</span></div><button class="icon-btn" title="Settings"><svg width="14" height="14"><use href="#i-settings"/></svg></button></div>
+      </aside>
+      <main class="listpane">
+        <div class="listheader">
+          <div class="searchbox"><svg width="14" height="14"><use href="#i-search"/></svg><input placeholder="Search accounts…" /><span class="kbd">⌘K</span></div>
+        </div>
+        <div class="listmeta"><div class="filters"><span class="pill-filter"><strong>All accounts</strong></span></div><span class="count">8 of 8</span></div>
+        <div class="list" style="opacity:0.4">
+          <div class="acct"><div class="avatar placeholder"><span class="initial">A</span><span class="status online"></span></div><div class="acct-main"><div class="acct-line1"><span class="acct-display">aspen.harvester</span></div><div class="acct-line2"><span class="acct-status online"><span class="dot online"></span>Online</span></div></div><div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>12,480</span></div></div>
+          <div class="acct"><div class="avatar placeholder"><span class="initial">B</span><span class="status ingame"></span></div><div class="acct-main"><div class="acct-line1"><span class="acct-alias">bouncer-bot</span></div><div class="acct-line2"><span class="acct-status ingame"><span class="dot ingame"></span>In Experience</span></div></div><div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>4,219</span></div></div>
+          <div class="acct"><div class="avatar placeholder"><span class="initial">C</span><span class="status ingame"></span></div><div class="acct-main"><div class="acct-line1"><span class="acct-display">cedar.runner</span></div><div class="acct-line2"><span class="acct-status ingame"><span class="dot ingame"></span>In Experience</span></div></div><div class="acct-right"><span class="robux"><span class="rsymbol">R$</span>980</span></div></div>
+        </div>
+      </main>
+    </div>
+    <!-- modal -->
+    <div class="modal-backdrop">
+      <div class="modal modal-md">
+        <div class="modal-header">
+          <div>
+            <div class="title">Add account</div>
+            <div class="subtitle">Sign in by cookie, password, or paste a list.</div>
+          </div>
+          <button class="icon-btn"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+        </div>
+        <div class="modal-body">
+          <div class="tabs-row" role="tablist">
+            <button class="tab-btn" aria-selected="true">Cookie</button>
+            <button class="tab-btn">Username · Password</button>
+            <button class="tab-btn">Bulk import</button>
+          </div>
+
+          <!-- Cookie tab content -->
+          <div class="field">
+            <label>.ROBLOSECURITY cookie</label>
+            <textarea class="textarea mono" rows="4" placeholder="_|WARNING:-DO-NOT-SHARE-THIS.--…">_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|_BFE3A92C…</textarea>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Alias <span class="tert">(optional)</span></label><input class="input" placeholder="e.g. bouncer-bot" /></div>
+            <div class="field"><label>Group</label>
+              <select class="select"><option>01 Farming</option><option>02 Trading</option><option>Other</option><option>+ New group…</option></select>
+            </div>
+          </div>
+          <div class="field" style="background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:var(--space-5);flex-direction:row;gap:var(--space-4);align-items:flex-start">
+            <span style="color:var(--accent);margin-top:1px"><svg width="14" height="14"><use href="#i-info"/></svg></span>
+            <div style="font-size:var(--fs-12);color:var(--fg-secondary);line-height:var(--lh-normal)">
+              The cookie is stored encrypted in your local profile. RAM Fork never transmits it.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <span class="left"><svg width="12" height="12"><use href="#i-shield"/></svg> Local-only · encrypted at rest</span>
+          <button class="btn">Cancel</button>
+          <button class="btn btn-primary">Validate &amp; add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATE: 2FA prompt
+     ============================================================ -->
+<section class="state" data-state="twofa">
+  <h3 class="state-title">Dialog · Add Account → Username/Password → 2FA challenge</h3>
+  <div class="window">
+    <header class="titlebar">
+      <div class="brand"><span class="logo"></span><strong>RAM Fork</strong></div>
+      <div class="winctrl"><button><svg width="14" height="14"><use href="#i-min"/></svg></button><button><svg width="12" height="12"><use href="#i-max"/></svg></button><button class="close"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>
+    </header>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="sidebar-section"><span class="heading">Groups</span><button class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></button></div>
+        <ul class="group-list">
+          <li class="group-row" aria-selected="true"><span class="gicon"><svg width="14" height="14"><use href="#i-users"/></svg></span><span class="gname">All accounts</span><span class="gcount">8</span></li>
+        </ul>
+        <div class="sidebar-footer"><span class="me-avatar">YT</span><div class="me-info"><span class="me-name">Local profile</span><span class="me-sub">v0.4.2-alpha</span></div><button class="icon-btn" title="Settings"><svg width="14" height="14"><use href="#i-settings"/></svg></button></div>
+      </aside>
+      <main class="listpane" style="opacity:0.4"></main>
+    </div>
+    <div class="modal-backdrop">
+      <div class="modal modal-md">
+        <div class="modal-header">
+          <div>
+            <div class="title">Two-factor required</div>
+            <div class="subtitle">Signing in as <span class="mono" style="color:var(--fg-primary)">@cedar_r</span></div>
+          </div>
+          <button class="icon-btn"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+        </div>
+        <div class="modal-body">
+          <div class="field">
+            <label>Verification method</label>
+            <div class="radio-list">
+              <div class="radio" aria-checked="true" role="radio">
+                <span class="rdot"></span>
+                <span class="rmain"><div class="rtitle">Email code</div><div class="rdesc">Sent to <span class="mono">c•••@gmail.com</span> · 6-digit numeric code</div></span>
+              </div>
+              <div class="radio" role="radio">
+                <span class="rdot"></span>
+                <span class="rmain"><div class="rtitle">Authenticator app</div><div class="rdesc">TOTP code from Authy / Google Authenticator</div></span>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label>6-digit code</label>
+            <input class="input mono" maxlength="6" placeholder="——————" style="font-size:var(--fs-16);letter-spacing:0.4em;text-align:center;padding:var(--space-5)" value="04 21" />
+          </div>
+          <div class="row-flex" style="font-size:var(--fs-12);color:var(--fg-secondary)">
+            <span>Didn't receive a code?</span>
+            <button class="btn btn-sm btn-ghost" style="color:var(--accent);padding:0">Resend</button>
+            <span class="spacer"></span>
+            <span class="tert mono">expires in 04:32</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn">Back</button>
+          <button class="btn btn-primary" disabled>Verify &amp; sign in</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATE: Launch dialog
+     ============================================================ -->
+<section class="state" data-state="launch">
+  <h3 class="state-title">Dialog · Launch</h3>
+  <div class="window">
+    <header class="titlebar">
+      <div class="brand"><span class="logo"></span><strong>RAM Fork</strong></div>
+      <div class="winctrl"><button><svg width="14" height="14"><use href="#i-min"/></svg></button><button><svg width="12" height="12"><use href="#i-max"/></svg></button><button class="close"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>
+    </header>
+    <div class="shell" style="opacity:0.5"><aside class="sidebar"></aside><main class="listpane"></main></div>
+    <div class="modal-backdrop">
+      <div class="modal modal-md">
+        <div class="modal-header">
+          <div>
+            <div class="title">Launch experience</div>
+            <div class="subtitle">As <span class="mono" style="color:var(--fg-primary)">@birch_collector</span> · bouncer-bot</div>
+          </div>
+          <button class="icon-btn"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+        </div>
+        <div class="modal-body">
+          <!-- mode tabs -->
+          <div class="field">
+            <label>Mode</label>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3)">
+              <button class="btn btn-sm active" style="justify-content:center">Place ID</button>
+              <button class="btn btn-sm" style="justify-content:center">Job ID</button>
+              <button class="btn btn-sm" style="justify-content:center">Follow</button>
+              <button class="btn btn-sm" style="justify-content:center">Private</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Place ID</label>
+            <input class="input mono" value="606849621" placeholder="e.g. 606849621" />
+            <span class="tert" style="font-size:var(--fs-11);font-family:var(--font-mono)">resolves to: Tower of Hell</span>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Bot profile</label>
+              <select class="select"><option>Use account default (Normal)</option><option>Normal</option><option>BottingPlayer</option><option>BottingBot</option></select>
+            </div>
+            <div class="field">
+              <label>Multi-instance</label>
+              <div class="row-flex" style="padding:var(--space-4) 0">
+                <span class="toggle" aria-checked="true" role="switch"></span>
+                <span class="muted" style="font-size:var(--fs-12)">Allow multiple Roblox windows</span>
+              </div>
+            </div>
+          </div>
+          <div class="field" style="background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:var(--space-5);flex-direction:row;gap:var(--space-4);align-items:flex-start">
+            <span style="color:var(--fg-tertiary);margin-top:1px"><svg width="14" height="14"><use href="#i-info"/></svg></span>
+            <div style="font-size:var(--fs-12);color:var(--fg-secondary)">
+              Window will spawn at <span class="mono" style="color:var(--fg-primary)">0,0  960×540</span> per the account override.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <span class="left mono">⌘⏎ to launch</span>
+          <button class="btn">Cancel</button>
+          <button class="btn btn-primary"><svg width="14" height="14"><use href="#i-play"/></svg>Launch</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATE: Settings
+     ============================================================ -->
+<section class="state" data-state="settings">
+  <h3 class="state-title">SettingsView</h3>
+  <div class="window">
+    <header class="titlebar">
+      <div class="brand"><span class="logo"></span><strong>RAM Fork</strong><span class="sep">·</span><span>Settings</span></div>
+      <div class="winctrl"><button><svg width="14" height="14"><use href="#i-min"/></svg></button><button><svg width="12" height="12"><use href="#i-max"/></svg></button><button class="close"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>
+    </header>
+    <div class="shell" style="opacity:0.45"><aside class="sidebar"></aside><main class="listpane"></main></div>
+    <div class="modal-backdrop">
+      <div class="modal modal-lg" style="width:780px">
+        <div class="modal-header">
+          <div>
+            <div class="title">Settings</div>
+            <div class="subtitle">Local preferences for this profile</div>
+          </div>
+          <button class="icon-btn"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+        </div>
+        <div class="settings-layout">
+          <!-- nav -->
+          <nav class="settings-nav">
+            <div class="item" aria-selected="true"><svg width="14" height="14"><use href="#i-settings"/></svg>General</div>
+            <div class="item"><svg width="14" height="14"><use href="#i-shield"/></svg>Security</div>
+            <div class="item"><svg width="14" height="14"><use href="#i-globe"/></svg>Network</div>
+            <div class="item"><svg width="14" height="14"><use href="#i-bug"/></svg>Logging</div>
+            <div class="item"><svg width="14" height="14"><use href="#i-keyboard"/></svg>Hotkeys</div>
+            <div class="item"><svg width="14" height="14"><use href="#i-palette"/></svg>Theme</div>
+          </nav>
+          <!-- pane -->
+          <div class="settings-pane">
+            <div class="field-section" style="padding-top:0">
+              <h4>General</h4>
+              <div class="field">
+                <label>Roblox install path</label>
+                <div class="row-flex">
+                  <input class="input mono" style="flex:1" value="C:\Users\you\AppData\Local\Roblox\Versions" />
+                  <button class="btn"><svg width="14" height="14"><use href="#i-folder"/></svg>Browse…</button>
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label>Default bot profile</label>
+                  <select class="select"><option>Normal</option><option>BottingPlayer</option><option>BottingBot</option></select>
+                </div>
+                <div class="field">
+                  <label>Launch behavior</label>
+                  <select class="select"><option>Open detail panel</option><option>Stay on list</option></select>
+                </div>
+              </div>
+              <div class="field row-flex" style="justify-content:space-between">
+                <div><div style="font-size:var(--fs-13)">Start with Windows</div><div class="tert" style="font-size:var(--fs-12)">Launch RAM Fork on system startup</div></div>
+                <span class="toggle" role="switch"></span>
+              </div>
+              <div class="field row-flex" style="justify-content:space-between">
+                <div><div style="font-size:var(--fs-13)">Minimize to tray</div><div class="tert" style="font-size:var(--fs-12)">Hide to system tray instead of closing</div></div>
+                <span class="toggle" aria-checked="true" role="switch"></span>
+              </div>
+            </div>
+
+            <div class="field-section">
+              <h4>Hotkeys</h4>
+              <div class="kbd-row"><span>Quick search</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">K</span></span></div>
+              <div class="kbd-row"><span>New account</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">N</span></span></div>
+              <div class="kbd-row"><span>Launch selected</span><span class="keys"><span class="kbd">⏎</span></span></div>
+              <div class="kbd-row"><span>Refresh selected</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">R</span></span></div>
+              <div class="kbd-row"><span>Toggle detail panel</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">.</span></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <span class="left">No unsaved changes</span>
+          <button class="btn">Cancel</button>
+          <button class="btn btn-primary" disabled>Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATE: Confirm delete
+     ============================================================ -->
+<section class="state" data-state="confirm">
+  <h3 class="state-title">Modal · Confirm delete</h3>
+  <div class="window">
+    <header class="titlebar">
+      <div class="brand"><span class="logo"></span><strong>RAM Fork</strong></div>
+      <div class="winctrl"><button><svg width="14" height="14"><use href="#i-min"/></svg></button><button><svg width="12" height="12"><use href="#i-max"/></svg></button><button class="close"><svg width="14" height="14"><use href="#i-x"/></svg></button></div>
+    </header>
+    <div class="shell" style="opacity:0.5"><aside class="sidebar"></aside><main class="listpane"></main></div>
+    <div class="modal-backdrop">
+      <div class="modal modal-sm">
+        <div class="modal-body" style="display:flex;gap:var(--space-5);align-items:flex-start;padding:var(--space-7) var(--space-6) var(--space-5)">
+          <span style="width:36px;height:36px;border-radius:50%;background:color-mix(in oklab, var(--status-error) 18%, transparent);color:var(--status-error);display:inline-flex;align-items:center;justify-content:center;flex:none">
+            <svg width="18" height="18"><use href="#i-trash"/></svg>
+          </span>
+          <div>
+            <div style="font-size:var(--fs-14);font-weight:var(--fw-semibold);margin-bottom:var(--space-2)">Delete bouncer-bot?</div>
+            <div class="muted" style="font-size:var(--fs-12);line-height:var(--lh-normal)">
+              The cookie, alias, custom fields, and proxy settings will be removed from this profile. Roblox itself isn't affected.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <span class="left" style="font-family:var(--font-mono);font-size:var(--fs-11)">⌫ to confirm · esc to cancel</span>
+          <button class="btn">Cancel</button>
+          <button class="btn btn-danger"><svg width="14" height="14"><use href="#i-trash"/></svg>Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ============================================================
+   Minimal JS — state tab switcher + theme toggle
+   (these are PROTOTYPE chrome; the WPF app won't have them)
+   ============================================================ */
+(function() {
+  const tabs = document.querySelectorAll('#state-tabs .tab');
+  const sections = document.querySelectorAll('section.state');
+  function show(name) {
+    tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.state === name ? 'true' : 'false'));
+    sections.forEach(s => s.setAttribute('data-active', s.dataset.state === name ? 'true' : 'false'));
+    history.replaceState(null, '', '#' + name);
+  }
+  tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.state)));
+  // restore from hash
+  const initial = (location.hash || '').replace('#','');
+  if (initial && document.querySelector(`section.state[data-state="${initial}"]`)) show(initial);
+
+  // theme
+  const root = document.documentElement;
+  const tt = document.getElementById('theme-toggle');
+  const tl = document.getElementById('theme-label');
+  function setTheme(t) {
+    root.setAttribute('data-theme', t);
+    tl.textContent = t === 'dark' ? 'Dark' : 'Light';
+    try { localStorage.setItem('ramfork-theme', t); } catch(e) {}
+  }
+  tt.addEventListener('click', () => setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
+  try {
+    const saved = localStorage.getItem('ramfork-theme');
+    if (saved) setTheme(saved);
+  } catch(e) {}
+})();
+</script>
+</body>
+</html>

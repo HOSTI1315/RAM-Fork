@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>RAM</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RAM.Core\RAM.Core.csproj" />
+    <ProjectReference Include="..\RAM.Plugins.Abstractions\RAM.Plugins.Abstractions.csproj" />
+    <ProjectReference Include="..\RAM.Storage\RAM.Storage.csproj" />
+    <ProjectReference Include="..\RAM.Roblox\RAM.Roblox.csproj" />
+    <ProjectReference Include="..\RAM.App\RAM.App.csproj" />
+  </ItemGroup>
+
+</Project>
