@@ -59,6 +59,9 @@ public sealed class RobloxApi : IRobloxApi
         // POST to authentication-ticket without CSRF triggers 403 + token in response header.
         using var req = NewRequest(HttpMethod.Post, $"{_options.AuthBaseUrl}/v1/authentication-ticket/", cookie);
         req.Headers.TryAddWithoutValidation("Referer", _options.LauncherReferer);
+        // Empty body + Content-Type: application/json — without these Roblox returns
+        // 400/415 instead of the expected 403 with the token header.
+        req.Content = new StringContent("", System.Text.Encoding.UTF8, "application/json");
         using var res = await _http.SendAsync(req, ct);
         if (res.Headers.TryGetValues("x-csrf-token", out var tokens))
         {
@@ -66,29 +69,59 @@ public sealed class RobloxApi : IRobloxApi
             _csrfCache.Set(cookie, token);
             return token;
         }
-        throw new RobloxApiException("Failed to obtain X-CSRF-TOKEN", res.StatusCode, "auth/v1/authentication-ticket");
+        var body = await SafeReadBodyAsync(res, ct);
+        _logger.LogWarning(
+            "CSRF token request returned {StatusCode} without x-csrf-token header. body={Body}",
+            (int)res.StatusCode, body.Length > 500 ? body[..500] + "..." : body);
+        throw new RobloxApiException(
+            $"Failed to obtain X-CSRF-TOKEN: HTTP {(int)res.StatusCode}",
+            res.StatusCode, "auth/v1/authentication-ticket");
     }
 
     public async Task<string> GetAuthTicketAsync(string cookie, CancellationToken ct = default)
     {
         var endpoint = $"{_options.AuthBaseUrl}/v1/authentication-ticket/";
+
+        // Roblox requires an empty JSON body + Content-Type: application/json on this POST.
+        // Without Content-Type the response is a generic 400/403 instead of the 200+ticket header.
+        var emptyBody = new StringContent("", System.Text.Encoding.UTF8, "application/json");
+
         using var res = await SendWithCsrfAsync(
             HttpMethod.Post,
             endpoint,
             cookie,
             req => req.Headers.TryAddWithoutValidation("Referer", _options.LauncherReferer),
-            content: null,
+            content: emptyBody,
             ct);
 
         if (!res.IsSuccessStatusCode)
+        {
+            var body = await SafeReadBodyAsync(res, ct);
+            _logger.LogWarning(
+                "Auth ticket request failed: {StatusCode} body={Body}",
+                (int)res.StatusCode,
+                body.Length > 500 ? body[..500] + "..." : body);
             throw new RobloxApiException(
-                $"AuthTicket request failed: {(int)res.StatusCode}",
+                $"AuthTicket request failed: HTTP {(int)res.StatusCode}",
                 res.StatusCode, endpoint);
+        }
         if (!res.Headers.TryGetValues("rbx-authentication-ticket", out var values))
+        {
+            var headerNames = string.Join(", ", res.Headers.Select(h => h.Key));
+            _logger.LogWarning(
+                "Auth ticket response 200 but no rbx-authentication-ticket header. Headers: {Headers}",
+                headerNames);
             throw new RobloxApiException(
                 "AuthTicket response missing rbx-authentication-ticket header",
                 res.StatusCode, endpoint);
+        }
         return values.First();
+    }
+
+    private static async Task<string> SafeReadBodyAsync(HttpResponseMessage res, CancellationToken ct)
+    {
+        try { return await res.Content.ReadAsStringAsync(ct); }
+        catch { return "(could not read body)"; }
     }
 
     public async Task<IReadOnlyDictionary<ulong, UserPresence>> GetPresenceAsync(

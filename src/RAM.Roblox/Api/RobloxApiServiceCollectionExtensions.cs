@@ -1,5 +1,6 @@
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Extensions.Http;
 using RAM.Core.Abstractions;
@@ -19,6 +20,18 @@ public static class RobloxApiServiceCollectionExtensions
             {
                 UseCookies = false,
                 AutomaticDecompression = DecompressionMethods.All,
+                // Auth endpoints depend on the ORIGINAL response headers (csrf token on 403,
+                // auth ticket on 200). Auto-redirect would swap them out for the redirect
+                // target's headers and we'd lose the values. We handle 403→retry manually.
+                AllowAutoRedirect = false,
+            })
+            .ConfigureHttpClient((sp, client) =>
+            {
+                // Apply User-Agent here so RobloxApiOptions.UserAgent actually reaches the
+                // wire (a previous wiring gap left it ignored). Roblox's WAF blocks /
+                // throttles requests with the default .NET UA.
+                var opts = sp.GetRequiredService<IOptions<RobloxApiOptions>>().Value;
+                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", opts.UserAgent);
             })
             .AddPolicyHandler(GetRetryPolicy());
 
@@ -28,7 +41,7 @@ public static class RobloxApiServiceCollectionExtensions
             var http = factory.CreateClient(RobloxApi.HttpClientName);
             return new RobloxApi(
                 http,
-                sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RobloxApiOptions>>(),
+                sp.GetRequiredService<IOptions<RobloxApiOptions>>(),
                 sp.GetRequiredService<CsrfTokenCache>(),
                 sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<RobloxApi>>());
         });
