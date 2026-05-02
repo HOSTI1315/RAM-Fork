@@ -50,15 +50,60 @@ public sealed class RobloxLauncher : ILauncher
 
     public async Task<LaunchResult> LaunchAsync(LaunchRequest request, CancellationToken ct = default)
     {
+        var userId = request.Account.UserId;
+        _logger.LogInformation("Launch requested for {UserId} target={Target}", userId, request.Target);
+
         if (string.IsNullOrEmpty(request.Account.Cookie))
-            return LaunchResult.Fail("Account has no cookie");
+        {
+            _logger.LogWarning("Launch aborted for {UserId}: account has no cookie", userId);
+            return LaunchResult.Fail("Account has no cookie. Re-add the account.");
+        }
 
-        _mutex.Acquire();
-
-        using var cookieLockHandle = await _cookieLock.AcquireAsync(ct);
         try
         {
-            var ticket = await _ticketProvider.GetAsync(request.Account.Cookie, ct);
+            _logger.LogDebug("Acquiring singleton mutex bypass for {UserId}", userId);
+            _mutex.Acquire();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Mutex bypass failed for {UserId}", userId);
+            return LaunchResult.Fail($"Could not acquire singleton mutex bypass: {ex.Message}");
+        }
+
+        IDisposable? cookieLockHandle = null;
+        try
+        {
+            _logger.LogDebug("Acquiring cookie file lock for {UserId}", userId);
+            cookieLockHandle = await _cookieLock.AcquireAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Cookie file lock failed for {UserId}", userId);
+            return LaunchResult.Fail($"Could not lock Roblox cookie file: {ex.Message}");
+        }
+
+        try
+        {
+            _logger.LogDebug("Fetching auth ticket for {UserId}", userId);
+            string ticket;
+            try
+            {
+                ticket = await _ticketProvider.GetAsync(request.Account.Cookie, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Auth ticket fetch failed for {UserId}", userId);
+                return LaunchResult.Fail(
+                    "Could not fetch Roblox auth ticket. The cookie may have expired or been revoked. " +
+                    "Re-auth via Add Account.");
+            }
+            if (string.IsNullOrWhiteSpace(ticket))
+            {
+                _logger.LogError("Auth ticket fetch returned empty for {UserId}", userId);
+                return LaunchResult.Fail("Roblox returned an empty auth ticket. Cookie may be invalid.");
+            }
+            _logger.LogDebug("Auth ticket fetched for {UserId} (len={Len})", userId, ticket.Length);
+
             var trackerId = string.IsNullOrEmpty(request.Account.BrowserTrackerId)
                 ? BrowserTrackerId.Generate()
                 : request.Account.BrowserTrackerId;
@@ -66,20 +111,44 @@ public sealed class RobloxLauncher : ILauncher
             var installPath = _installLocator.FindCurrentVersion();
             if (installPath is not null)
             {
+                _logger.LogDebug("Roblox install found at {Path}; patching ClientAppSettings", installPath);
                 var settingsPath = Path.Combine(installPath, "ClientSettings", "ClientAppSettings.json");
-                await _settingsPatcher.ApplyAsync(settingsPath, request.Profile, ct);
+                try { await _settingsPatcher.ApplyAsync(settingsPath, request.Profile, ct); }
+                catch (Exception ex) { _logger.LogWarning(ex, "ClientAppSettings patch failed (non-fatal)"); }
             }
             else
             {
-                _logger.LogWarning("Roblox install not found; skipping ClientAppSettings patch");
+                _logger.LogWarning("Roblox install not found under %LocalAppData%\\Roblox\\Versions. " +
+                                   "Is Roblox installed via the standard launcher / Bloxstrap?");
+                // Don't fail — Roblox launcher may still resolve via the URI scheme handler.
             }
 
             var uri = RobloxPlayerUriBuilder.Build(new RobloxPlayerUriBuilder.Params(
                 AuthTicket: ticket,
                 BrowserTrackerId: trackerId,
                 Target: request.Target));
+            _logger.LogDebug("Built launch URI for {UserId} length={Len}", userId, uri.Length);
 
-            var pid = ShellLaunch(uri);
+            int pid;
+            try
+            {
+                pid = ShellLaunch(uri);
+            }
+            catch (System.ComponentModel.Win32Exception wex)
+            {
+                _logger.LogError(wex, "Shell-execute failed for roblox-player URI (handler not registered?)");
+                return LaunchResult.Fail(
+                    "Windows could not handle the roblox-player:// URI. " +
+                    "This usually means Roblox isn't installed properly. " +
+                    "Reinstall Roblox or run it once from the official site, then try again.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Shell-execute failed for {UserId}", userId);
+                return LaunchResult.Fail($"Could not launch Roblox: {ex.Message}");
+            }
+
+            _logger.LogInformation("Launch dispatched for {UserId} (shell-exec pid={Pid})", userId, pid);
 
             // Hold the cookie lock until the Roblox launcher has had a chance to read it.
             // Subsequent parallel launches wait on AcquireAsync until this delay elapses.
@@ -89,12 +158,22 @@ public sealed class RobloxLauncher : ILauncher
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Launch failed for account {UserId}", request.Account.UserId);
+            _logger.LogError(ex, "Launch failed unexpectedly for {UserId}", userId);
             return LaunchResult.Fail(ex.Message);
+        }
+        finally
+        {
+            cookieLockHandle?.Dispose();
         }
     }
 
-    private int ShellLaunch(string uri)
+    /// <summary>
+    /// Hands the URI to the OS shell. Returns the immediate handler PID, or -1 when shell-
+    /// execute on a custom URI scheme returns no process handle (which is normal — the
+    /// protocol handler may run out-of-process). A null return here is NOT failure;
+    /// failure surfaces as a <see cref="System.ComponentModel.Win32Exception"/>.
+    /// </summary>
+    private static int ShellLaunch(string uri)
     {
         var psi = new ProcessStartInfo
         {

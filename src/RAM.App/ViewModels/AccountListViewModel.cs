@@ -165,7 +165,23 @@ public sealed partial class AccountListViewModel : ObservableObject
         CancellationToken ct = default)
     {
         item.Status = AccountStatus.Restarting;
-        var result = await _launcher.LaunchAsync(new LaunchRequest(item.Account, target), ct);
+        LaunchResult result;
+        try
+        {
+            result = await _launcher.LaunchAsync(new LaunchRequest(item.Account, target), ct);
+        }
+        catch (Exception ex)
+        {
+            // Last-resort catch: an unhandled exception escaping the launcher would
+            // otherwise vanish into the RelayCommand handler (which logs to a logger
+            // that may have no visible sink). We always want the user to see SOMETHING.
+            item.Status = AccountStatus.Error;
+            await _dialogs.ShowErrorAsync(
+                "Launch crashed",
+                $"{ex.GetType().Name}: {ex.Message}\n\nFull details written to %AppData%\\RAM\\logs\\.");
+            return;
+        }
+
         item.Status = result.IsSuccess ? AccountStatus.NotInGame : AccountStatus.Error;
 
         if (!result.IsSuccess)
