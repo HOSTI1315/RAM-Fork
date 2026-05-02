@@ -71,6 +71,9 @@ RAM.UI-*.exe
 # =====================================================================
 release/
 
+# Local-only staging for `gh issue create --body-file` workflow.
+.issues/
+
 # Defence-in-depth: even if someone moves a built .exe outside release/,
 # don't accept it into the index. Source is .cs / .xaml — there is no
 # legitimate reason for a tracked .exe in this repo.
